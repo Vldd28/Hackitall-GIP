@@ -65,6 +65,7 @@ kotlin {
             // Serialization & coroutines
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
 
             // Image loading
             implementation(libs.coil.compose)
@@ -108,5 +109,14 @@ android {
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
+}
+
+// Force kotlinx-datetime to a single version compatible with Kotlin 2.3.x / wasmJs.
+// Supabase pulls in an older version whose Instant class clashes with kotlin.time.Instant
+// added in Kotlin 2.0 stdlib, causing an IrTypeAliasSymbolImpl "already bound" crash.
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinx.datetime.get()}")
+    }
 }
 
