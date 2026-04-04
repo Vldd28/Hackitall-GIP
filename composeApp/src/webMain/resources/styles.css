@@ -5,3 +5,19 @@ html, body {
     padding: 0;
     overflow: hidden;
 }
+
+/* Canvas-ul Compose trebuie sa fie sub div-ul hartii */
+canvas {
+    position: relative;
+    z-index: 1;
+}
+
+#wandr-map {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+}
