@@ -8,7 +8,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -240,6 +242,47 @@ private fun EventCard(event: Event) {
     }
 }
 
+// ── Dark-themed color scheme for Material3 Date/Time pickers ─────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun wandrDatePickerColors() = DatePickerDefaults.colors(
+    containerColor = DarkBg,
+    titleContentColor = TealColor,
+    headlineContentColor = LightText,
+    weekdayContentColor = SubText,
+    subheadContentColor = SubText,
+    navigationContentColor = LightText,
+    yearContentColor = LightText,
+    currentYearContentColor = TealColor,
+    selectedYearContainerColor = TealColor,
+    selectedYearContentColor = DarkBg,
+    dayContentColor = LightText,
+    selectedDayContainerColor = TealColor,
+    selectedDayContentColor = DarkBg,
+    todayContentColor = TealColor,
+    todayDateBorderColor = TealColor
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun wandrTimePickerColors() = TimePickerDefaults.colors(
+    clockDialColor = CardBg,
+    clockDialSelectedContentColor = DarkBg,
+    clockDialUnselectedContentColor = LightText,
+    selectorColor = TealColor,
+    containerColor = DarkBg,
+    periodSelectorBorderColor = SubText,
+    periodSelectorSelectedContainerColor = TealColor,
+    periodSelectorUnselectedContainerColor = DarkBg,
+    periodSelectorSelectedContentColor = DarkBg,
+    periodSelectorUnselectedContentColor = LightText,
+    timeSelectorSelectedContainerColor = TealColor,
+    timeSelectorUnselectedContainerColor = CardBg,
+    timeSelectorSelectedContentColor = DarkBg,
+    timeSelectorUnselectedContentColor = LightText
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CreateEventDialog(
     place: PlaceResult,
@@ -248,10 +291,33 @@ private fun CreateEventDialog(
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var dateTime by remember { mutableStateOf("") }
     var maxParticipants by remember { mutableStateOf("10") }
     var isLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    // Date picker state — default to today
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = System.currentTimeMillis()
+    )
+    // Time picker state — default to 20:00
+    val timePickerState = rememberTimePickerState(initialHour = 20, initialMinute = 0)
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    // Format the selected date + time for display
+    val selectedDate = datePickerState.selectedDateMillis
+    val dateLabel = if (selectedDate != null) {
+        val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC")).apply {
+            timeInMillis = selectedDate
+        }
+        "%04d-%02d-%02d".format(
+            cal.get(java.util.Calendar.YEAR),
+            cal.get(java.util.Calendar.MONTH) + 1,
+            cal.get(java.util.Calendar.DAY_OF_MONTH)
+        )
+    } else "Pick a date"
+
+    val timeLabel = "%02d:%02d".format(timePickerState.hour, timePickerState.minute)
 
     val repo = remember { EventRepository() }
     val scope = rememberCoroutineScope()
@@ -280,14 +346,35 @@ private fun CreateEventDialog(
                     modifier = Modifier.fillMaxWidth(),
                     colors = wandrTextFieldColors()
                 )
-                OutlinedTextField(
-                    value = dateTime,
-                    onValueChange = { dateTime = it },
-                    label = { Text("Date & time  (e.g. 2025-06-01T20:00:00)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = wandrTextFieldColors()
-                )
+
+                // ── Date button ──────────────────────────────────────────
+                OutlinedButton(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(4.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, SubText),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = LightText)
+                ) {
+                    Icon(Icons.Default.DateRange, null, tint = TealColor, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(dateLabel, color = if (selectedDate != null) LightText else SubText, fontSize = 14.sp)
+                    Spacer(Modifier.weight(1f))
+                }
+
+                // ── Time button ──────────────────────────────────────────
+                OutlinedButton(
+                    onClick = { showTimePicker = true },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(4.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, SubText),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = LightText)
+                ) {
+                    Icon(Icons.Default.AccessTime, null, tint = TealColor, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(timeLabel, color = LightText, fontSize = 14.sp)
+                    Spacer(Modifier.weight(1f))
+                }
+
                 OutlinedTextField(
                     value = maxParticipants,
                     onValueChange = { maxParticipants = it },
@@ -303,12 +390,13 @@ private fun CreateEventDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (title.isBlank() || dateTime.isBlank()) {
+                    if (title.isBlank() || selectedDate == null) {
                         error = "Title and date are required."
                         return@Button
                     }
                     isLoading = true
                     error = null
+                    val dateTimeStr = "${dateLabel}T${timeLabel}:00"
                     val insert = EventInsert(
                         creatorId = userId,
                         title = title.trim(),
@@ -316,7 +404,7 @@ private fun CreateEventDialog(
                         locationName = place.name,
                         lat = place.lat,
                         lng = place.lng,
-                        dateTime = dateTime.trim(),
+                        dateTime = dateTimeStr,
                         maxParticipants = maxParticipants.toIntOrNull() ?: 10,
                         isPublic = true
                     )
@@ -338,6 +426,61 @@ private fun CreateEventDialog(
             TextButton(onClick = onDismiss) { Text("Cancel", color = SubText) }
         }
     )
+
+    // ── Date picker dialog ───────────────────────────────────────────────────
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("OK", color = TealColor)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel", color = SubText)
+                }
+            },
+            colors = DatePickerDefaults.colors(containerColor = DarkBg)
+        ) {
+            DatePicker(
+                state = datePickerState,
+                colors = wandrDatePickerColors()
+            )
+        }
+    }
+
+    // ── Time picker dialog ───────────────────────────────────────────────────
+    if (showTimePicker) {
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            containerColor = DarkBg,
+            title = {
+                Text("Select time", color = LightText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            },
+            text = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TimePicker(
+                        state = timePickerState,
+                        colors = wandrTimePickerColors()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("OK", color = TealColor)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Cancel", color = SubText)
+                }
+            }
+        )
+    }
 }
 
 @Composable
