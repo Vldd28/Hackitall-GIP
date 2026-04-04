@@ -21,11 +21,11 @@ class PlacesViewModel(private val repository: PlacesRepository) : ViewModel() {
     private var searchJob: Job? = null
 
     /** Call when camera stops moving. Debounces rapid calls by 400ms. */
-    fun loadPlaces(lat: Double, lng: Double) {
+    fun loadPlaces(lat: Double, lng: Double, radius: Double = 1500.0) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {
             delay(400)
-            _places.value = repository.searchNearby(lat, lng, allTypes)
+            _places.value = repository.searchNearby(lat, lng, allTypes, radius)
         }
     }
 }

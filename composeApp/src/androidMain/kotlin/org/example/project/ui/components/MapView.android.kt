@@ -1,6 +1,10 @@
 package org.example.project.ui.components
 
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -12,10 +16,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -30,6 +36,7 @@ import org.example.project.viewmodel.PlacesViewModel
 
 private val DEFAULT_POSITION = LatLng(44.4268, 26.1025) // Bucharest
 private const val DEFAULT_ZOOM = 14f
+private const val MIN_ZOOM_FOR_PLACES = 14f  // sub acest zoom, pinurile dispar
 
 private val WANDR_MAP_STYLE = MapStyleOptions("""
 [
@@ -70,11 +77,48 @@ private val WANDR_MAP_STYLE = MapStyleOptions("""
 ]
 """.trimIndent())
 
-private fun PlaceType.markerHue(): Float = when (this) {
-    PlaceType.MUSEUM     -> BitmapDescriptorFactory.HUE_VIOLET
-    PlaceType.CAFE       -> BitmapDescriptorFactory.HUE_ORANGE
-    PlaceType.CLUB       -> BitmapDescriptorFactory.HUE_ROSE
-    PlaceType.RESTAURANT -> BitmapDescriptorFactory.HUE_YELLOW
+private fun PlaceType.pinColor(): Int = when (this) {
+    PlaceType.MUSEUM     -> android.graphics.Color.parseColor("#9C6ED6") // purple
+    PlaceType.CAFE       -> android.graphics.Color.parseColor("#C8793A") // brown-orange
+    PlaceType.CLUB       -> android.graphics.Color.parseColor("#D44F7A") // pink
+    PlaceType.RESTAURANT -> android.graphics.Color.parseColor("#E8534A") // red-orange
+}
+
+private fun PlaceType.pinEmoji(): String = when (this) {
+    PlaceType.MUSEUM     -> "🏛"
+    PlaceType.CAFE       -> "☕"
+    PlaceType.CLUB       -> "🎵"
+    PlaceType.RESTAURANT -> "🍴"
+}
+
+/** Draws a teardrop pin bitmap. Call BitmapDescriptorFactory.fromBitmap() only inside GoogleMap content. */
+private fun createPlaceBitmap(type: PlaceType): Bitmap {
+    val w = 48
+    val h = 64
+    val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+
+    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = type.pinColor() }
+    val whitePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE }
+
+    val radius = w / 2f
+    canvas.drawCircle(w / 2f, radius, radius, bgPaint)
+    val tip = Path().apply {
+        moveTo(w * 0.25f, h * 0.55f)
+        lineTo(w * 0.75f, h * 0.55f)
+        lineTo(w * 0.5f, h.toFloat())
+        close()
+    }
+    canvas.drawPath(tip, bgPaint)
+    canvas.drawCircle(w / 2f, radius, radius * 0.52f, whitePaint)
+
+    val emojiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 14f
+        textAlign = Paint.Align.CENTER
+    }
+    canvas.drawText(type.pinEmoji(), w / 2f, radius + 5f, emojiPaint)
+
+    return bitmap
 }
 
 @Composable
@@ -104,18 +148,49 @@ actual fun MapView(
 
     val places by placesViewModel.places.collectAsState()
 
-    val startPosition = remember(events) {
-        events.firstOrNull()?.let { LatLng(it.lat, it.lng) } ?: DEFAULT_POSITION
+    // Raw bitmaps — no Maps SDK dependency, safe to create here
+    val placeBitmaps = remember {
+        PlaceType.entries.associateWith { createPlaceBitmap(it) }
     }
+    // Cache for BitmapDescriptor — populated once inside GoogleMap where SDK is ready
+    val placeIcons = remember { mutableMapOf<PlaceType, BitmapDescriptor>() }
+
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(startPosition, DEFAULT_ZOOM)
+        position = CameraPosition.fromLatLngZoom(DEFAULT_POSITION, DEFAULT_ZOOM)
     }
 
-    // Load places on initial load and whenever camera stops moving
-    LaunchedEffect(cameraPositionState.isMoving) {
-        if (!cameraPositionState.isMoving) {
+    // Când evenimentele se încarcă, mută camera la primul eveniment
+    LaunchedEffect(events) {
+        val first = events.firstOrNull() ?: return@LaunchedEffect
+        cameraPositionState.animate(
+            CameraUpdateFactory.newLatLngZoom(LatLng(first.lat, first.lng), DEFAULT_ZOOM)
+        )
+    }
+
+    val currentZoom = cameraPositionState.position.zoom
+    val showPlaces = currentZoom >= MIN_ZOOM_FOR_PLACES
+
+    // Radius scade pe măsură ce zoom-ul crește — 20 rezultate acoperă zona vizibilă
+    fun radiusForZoom(zoom: Float): Double = when {
+        zoom >= 17f -> 300.0
+        zoom >= 16f -> 600.0
+        zoom >= 15f -> 1000.0
+        else        -> 1500.0
+    }
+
+    // Load places on first render
+    LaunchedEffect(Unit) {
+        if (showPlaces) {
             val target = cameraPositionState.position.target
-            placesViewModel.loadPlaces(target.latitude, target.longitude)
+            placesViewModel.loadPlaces(target.latitude, target.longitude, radiusForZoom(currentZoom))
+        }
+    }
+
+    // Reload when camera stops moving
+    LaunchedEffect(cameraPositionState.isMoving) {
+        if (!cameraPositionState.isMoving && showPlaces) {
+            val target = cameraPositionState.position.target
+            placesViewModel.loadPlaces(target.latitude, target.longitude, radiusForZoom(cameraPositionState.position.zoom))
         }
     }
 
@@ -135,15 +210,20 @@ actual fun MapView(
             )
         }
 
-        // Place markers — colored by type
-        places.forEach { place ->
-            Marker(
-                state = MarkerState(LatLng(place.lat, place.lng)),
-                title = place.name,
-                snippet = place.address,
-                icon = BitmapDescriptorFactory.defaultMarker(place.type.markerHue()),
-                onClick = { onPlaceClick(place); false }
-            )
+        // Place markers — vizibile doar când zoom >= MIN_ZOOM_FOR_PLACES
+        if (showPlaces) {
+            places.forEach { place ->
+                val icon = placeIcons.getOrPut(place.type) {
+                    BitmapDescriptorFactory.fromBitmap(placeBitmaps[place.type]!!)
+                }
+                Marker(
+                    state = MarkerState(LatLng(place.lat, place.lng)),
+                    title = place.name,
+                    snippet = place.address,
+                    icon = icon,
+                    onClick = { onPlaceClick(place); false }
+                )
+            }
         }
     }
 }
