@@ -51,7 +51,7 @@ class PlacesRepository(private val apiKey: String) {
                     append("Content-Type", "application/json")
                     append("X-Goog-Api-Key", apiKey)
                     append("X-Goog-FieldMask",
-                        "places.id,places.displayName,places.location,places.formattedAddress,places.types,places.rating,places.userRatingCount")
+                        "places.id,places.displayName,places.location,places.formattedAddress,places.types,places.rating,places.userRatingCount,places.photos")
                 }
                 setBody(body)
             }
@@ -84,10 +84,16 @@ class PlacesRepository(private val apiKey: String) {
                 val placeType = requestedTypes.firstOrNull { it.googleType in apiTypes }
                     ?: return@mapNotNull null
 
+                val photoNames = obj["photos"]?.jsonArray
+                    ?.take(5)
+                    ?.mapNotNull { it.jsonObject["name"]?.jsonPrimitive?.content }
+                    ?: emptyList()
+
                 PlaceResult(
                     id = id, name = name, lat = lat, lng = lng,
                     type = placeType, address = address,
-                    rating = rating, totalRatings = totalRatings
+                    rating = rating, totalRatings = totalRatings,
+                    photoNames = photoNames
                 )
             } catch (e: Exception) {
                 null

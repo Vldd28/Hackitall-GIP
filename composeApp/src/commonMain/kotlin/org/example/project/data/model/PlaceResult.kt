@@ -15,5 +15,6 @@ data class PlaceResult(
     val type: PlaceType,
     val address: String = "",
     val rating: Double? = null,
-    val totalRatings: Int? = null
+    val totalRatings: Int? = null,
+    val photoNames: List<String> = emptyList()
 )

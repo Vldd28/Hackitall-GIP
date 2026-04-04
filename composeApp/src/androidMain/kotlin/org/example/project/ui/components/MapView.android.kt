@@ -10,7 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
@@ -124,6 +127,7 @@ private fun createPlaceBitmap(type: PlaceType): Bitmap {
 @Composable
 actual fun MapView(
     events: List<Event>,
+    userId: String,
     onEventClick: (Event) -> Unit,
     onPlaceClick: (PlaceResult) -> Unit,
     modifier: Modifier
@@ -147,6 +151,7 @@ actual fun MapView(
     )
 
     val places by placesViewModel.places.collectAsState()
+    var selectedPlace by remember { mutableStateOf<PlaceResult?>(null) }
 
     // Raw bitmaps — no Maps SDK dependency, safe to create here
     val placeBitmaps = remember {
@@ -221,9 +226,20 @@ actual fun MapView(
                     title = place.name,
                     snippet = place.address,
                     icon = icon,
-                    onClick = { onPlaceClick(place); false }
+                    onClick = { selectedPlace = place; false }
                 )
             }
         }
+    }
+
+    // Bottom sheet — apare când apeși pe un pin de locație
+    selectedPlace?.let { place ->
+        PlaceBottomSheet(
+            place = place,
+            allEvents = events,
+            userId = userId,
+            apiKey = apiKey,
+            onDismiss = { selectedPlace = null }
+        )
     }
 }

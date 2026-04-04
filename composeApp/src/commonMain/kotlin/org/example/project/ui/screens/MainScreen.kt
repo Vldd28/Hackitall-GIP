@@ -508,9 +508,10 @@ private fun ExplorePage() {
 // ══════════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun MapPage(events: List<Event>, onEventClick: (Event) -> Unit, onPlaceClick: (org.example.project.data.model.PlaceResult) -> Unit) {
+private fun MapPage(events: List<Event>, userId: String, onEventClick: (Event) -> Unit, onPlaceClick: (org.example.project.data.model.PlaceResult) -> Unit) {
     MapView(
         events = events,
+        userId = userId,
         onEventClick = onEventClick,
         onPlaceClick = onPlaceClick,
         modifier = Modifier.fillMaxSize()
@@ -553,7 +554,7 @@ fun MainScreen(
     ) {
         when (selectedTab) {
             0 -> ExplorePage()
-            1 -> MapPage(events = events, onEventClick = {}, onPlaceClick = {})
+            1 -> MapPage(events = events, userId = userId, onEventClick = {}, onPlaceClick = {})
             2 -> ProfilePage(
                 profile = profile,
                 isLoading = isLoading,
