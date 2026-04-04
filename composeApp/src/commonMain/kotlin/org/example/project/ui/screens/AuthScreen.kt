@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -75,115 +76,6 @@ private fun DrawScope.drawSidePlane(center: Offset, s: Float, angle: Float, colo
     }
 }
 
-// ── Side-view locomotive ─────────────────────────────────────────────────────
-
-private fun DrawScope.drawLocomotive(cx: Float, cy: Float, locoWidth: Float) {
-    val lw = locoWidth
-    val bodyH = lw * 0.22f
-    val bodyY = cy - bodyH / 2f
-    val bodyLeft = cx - lw * 0.45f
-    val bodyRight = cx + lw * 0.45f
-
-    // ── Boiler (main body — long rectangle with rounded front) ───────────
-    val boilerPath = Path().apply {
-        moveTo(bodyLeft + lw * 0.08f, bodyY)
-        lineTo(bodyRight - lw * 0.05f, bodyY)
-        // Rounded front (right side)
-        cubicTo(
-            bodyRight + lw * 0.02f, bodyY,
-            bodyRight + lw * 0.04f, bodyY + bodyH * 0.5f,
-            bodyRight - lw * 0.05f, bodyY + bodyH
-        )
-        lineTo(bodyLeft + lw * 0.08f, bodyY + bodyH)
-        close()
-    }
-    drawPath(boilerPath, color = Teal, style = Fill)
-
-    // ── Cab (back section — taller box) ──────────────────────────────────
-    val cabW = lw * 0.18f
-    val cabH = bodyH * 1.55f
-    val cabLeft = bodyLeft
-    val cabTop = bodyY + bodyH - cabH
-    drawRoundRect(
-        color = Teal.copy(alpha = 0.9f),
-        topLeft = Offset(cabLeft, cabTop),
-        size = androidx.compose.ui.geometry.Size(cabW, cabH),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(lw * 0.02f)
-    )
-    // Cab window
-    drawRoundRect(
-        color = SteelBlueDark.copy(alpha = 0.7f),
-        topLeft = Offset(cabLeft + cabW * 0.2f, cabTop + cabH * 0.15f),
-        size = androidx.compose.ui.geometry.Size(cabW * 0.6f, cabH * 0.3f),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(lw * 0.01f)
-    )
-
-    // ── Smokestack (chimney) ─────────────────────────────────────────────
-    val stackX = bodyRight - lw * 0.14f
-    val stackW = lw * 0.05f
-    val stackH = bodyH * 0.5f
-    drawRoundRect(
-        color = SteelBlue,
-        topLeft = Offset(stackX - stackW / 2, bodyY - stackH),
-        size = androidx.compose.ui.geometry.Size(stackW, stackH),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(lw * 0.01f)
-    )
-    // Stack top (wider cap)
-    drawRoundRect(
-        color = SteelBlue,
-        topLeft = Offset(stackX - stackW * 0.8f, bodyY - stackH - lw * 0.015f),
-        size = androidx.compose.ui.geometry.Size(stackW * 1.6f, lw * 0.025f),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(lw * 0.005f)
-    )
-
-    // ── Dome on boiler ───────────────────────────────────────────────────
-    val domeX = cx
-    drawOval(
-        color = Teal.copy(alpha = 0.8f),
-        topLeft = Offset(domeX - lw * 0.04f, bodyY - bodyH * 0.22f),
-        size = androidx.compose.ui.geometry.Size(lw * 0.08f, bodyH * 0.28f)
-    )
-
-    // ── Cowcatcher (front, right side) ───────────────────────────────────
-    val cowPath = Path().apply {
-        moveTo(bodyRight - lw * 0.05f, bodyY + bodyH)
-        lineTo(bodyRight + lw * 0.06f, bodyY + bodyH + bodyH * 0.2f)
-        lineTo(bodyRight - lw * 0.05f, bodyY + bodyH + bodyH * 0.2f)
-        close()
-    }
-    drawPath(cowPath, color = SteelBlue, style = Fill)
-
-    // ── Wheels ───────────────────────────────────────────────────────────
-    val wheelY = bodyY + bodyH + bodyH * 0.05f
-    val bigR = bodyH * 0.28f
-    val smallR = bodyH * 0.18f
-
-    // 3 big drive wheels
-    for (i in 0..2) {
-        val wx = bodyLeft + cabW + lw * 0.06f + i * (lw * 0.16f)
-        drawCircle(color = SteelBlue, radius = bigR, center = Offset(wx, wheelY))
-        drawCircle(color = SteelBlueDark, radius = bigR * 0.45f, center = Offset(wx, wheelY))
-    }
-    // 1 small front wheel
-    drawCircle(color = SteelBlue, radius = smallR, center = Offset(bodyRight - lw * 0.04f, wheelY + bigR - smallR))
-    drawCircle(color = SteelBlueDark, radius = smallR * 0.45f, center = Offset(bodyRight - lw * 0.04f, wheelY + bigR - smallR))
-
-    // ── Connecting rod (line between big wheels) ─────────────────────────
-    val rodY = wheelY
-    drawLine(
-        color = SteelBlueDark.copy(alpha = 0.6f),
-        start = Offset(bodyLeft + cabW + lw * 0.06f, rodY),
-        end = Offset(bodyLeft + cabW + lw * 0.06f + 2 * (lw * 0.16f), rodY),
-        strokeWidth = lw * 0.012f
-    )
-
-    // ── Undercarriage strip ──────────────────────────────────────────────
-    drawRect(
-        color = SteelBlue.copy(alpha = 0.5f),
-        topLeft = Offset(bodyLeft, bodyY + bodyH),
-        size = androidx.compose.ui.geometry.Size(bodyRight - bodyLeft + lw * 0.06f, bodyH * 0.08f)
-    )
-}
 
 // ── Background: dotted routes + big planes ───────────────────────────────────
 
@@ -268,35 +160,19 @@ fun AuthScreen(
         ) {
             Spacer(Modifier.weight(1f))
 
-            // ── Locomotive with app name ─────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 400.dp)
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawLocomotive(
-                        cx = size.width * 0.5f,
-                        cy = size.height * 0.55f,
-                        locoWidth = size.width * 0.92f
-                    )
-                }
-                // App name on top of the locomotive body
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        "Wandr",
-                        fontSize = 42.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Cream
-                    )
-                    Text(
-                        "Find your adventure buddies",
-                        fontSize = 12.sp,
-                        color = Cream.copy(alpha = 0.8f)
-                    )
-                }
+            // ── App name ─────────────────────────────────────────────────
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "Wandr",
+                    fontSize = 42.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Cream
+                )
+                Text(
+                    "Find your adventure buddies",
+                    fontSize = 12.sp,
+                    color = Cream.copy(alpha = 0.8f)
+                )
             }
 
             Spacer(Modifier.height(20.dp))

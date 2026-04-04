@@ -1,16 +1,9 @@
 package org.example.project.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -36,7 +29,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -270,6 +262,140 @@ private fun ProfileBackground() {
     }
 }
 
+// ── Settings icon (gear) ─────────────────────────────────────────────────────
+@Composable
+private fun SettingsIcon(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.size(26.dp)) {
+        val w = size.width; val h = size.height
+        val cx = w * 0.5f; val cy = h * 0.5f
+        // Outer gear teeth
+        drawCircle(color = tint, radius = w * 0.38f, center = Offset(cx, cy), style = Stroke(width = w * 0.09f))
+        // Inner circle
+        drawCircle(color = tint, radius = w * 0.17f, center = Offset(cx, cy), style = Stroke(width = w * 0.07f))
+        // Teeth (6)
+        for (i in 0..5) {
+            val angle = Math.toRadians((i * 60.0))
+            val x1 = cx + (w * 0.30f) * kotlin.math.cos(angle).toFloat()
+            val y1 = cy + (h * 0.30f) * kotlin.math.sin(angle).toFloat()
+            val x2 = cx + (w * 0.48f) * kotlin.math.cos(angle).toFloat()
+            val y2 = cy + (h * 0.48f) * kotlin.math.sin(angle).toFloat()
+            drawLine(tint, Offset(x1, y1), Offset(x2, y2), strokeWidth = w * 0.10f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        }
+    }
+}
+
+// ── Sun icon ────────────────────────────────────────────────────────────────
+@Composable
+private fun SunIcon(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.size(26.dp)) {
+        val w = size.width; val h = size.height
+        val cx = w * 0.5f; val cy = h * 0.5f
+        drawCircle(color = tint, radius = w * 0.22f, center = Offset(cx, cy))
+        for (i in 0..7) {
+            val angle = Math.toRadians((i * 45.0))
+            val x1 = cx + (w * 0.30f) * kotlin.math.cos(angle).toFloat()
+            val y1 = cy + (h * 0.30f) * kotlin.math.sin(angle).toFloat()
+            val x2 = cx + (w * 0.46f) * kotlin.math.cos(angle).toFloat()
+            val y2 = cy + (h * 0.46f) * kotlin.math.sin(angle).toFloat()
+            drawLine(tint, Offset(x1, y1), Offset(x2, y2), strokeWidth = w * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        }
+    }
+}
+
+// ── Moon icon ───────────────────────────────────────────────────────────────
+@Composable
+private fun MoonIcon(tint: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier.size(26.dp)) {
+        val w = size.width; val h = size.height
+        val moonPath = Path().apply {
+            // Crescent moon using two arcs
+            val cx = w * 0.5f; val cy = h * 0.5f; val r = w * 0.35f
+            moveTo(cx, cy - r)
+            // Full circle arc
+            cubicTo(cx + r * 1.3f, cy - r * 0.6f, cx + r * 1.3f, cy + r * 0.6f, cx, cy + r)
+            // Inner cutout arc (smaller offset circle)
+            cubicTo(cx - r * 0.2f, cy + r * 0.3f, cx - r * 0.2f, cy - r * 0.3f, cx, cy - r)
+            close()
+        }
+        drawPath(moonPath, color = tint, style = Fill)
+    }
+}
+
+// ── Settings half-sheet overlay ─────────────────────────────────────────────
+@Composable
+private fun SettingsSheet(
+    isDarkMode: Boolean,
+    onToggleDarkMode: () -> Unit,
+    onSignOut: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.35f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.TopEnd
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxHeight(0.5f)
+                .fillMaxWidth(0.75f)
+                .padding(top = 60.dp, end = 12.dp)
+                .clickable(enabled = false) { },
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Cream.copy(alpha = 0.97f))
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Settings", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = SteelBlueDark)
+
+                Spacer(Modifier.height(24.dp))
+
+                // Dark/Light mode toggle
+                Text("Appearance", fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                    color = SteelBlue, letterSpacing = 1.sp)
+                Spacer(Modifier.height(12.dp))
+
+                IconButton(
+                    onClick = onToggleDarkMode,
+                    modifier = Modifier.size(56.dp)
+                        .clip(CircleShape)
+                        .background(if (isDarkMode) SteelBlueDark else Teal.copy(alpha = 0.25f))
+                ) {
+                    if (isDarkMode) {
+                        MoonIcon(tint = Cream, modifier = Modifier.size(30.dp))
+                    } else {
+                        SunIcon(tint = SteelBlueDark, modifier = Modifier.size(30.dp))
+                    }
+                }
+
+                Text(
+                    if (isDarkMode) "Dark Mode" else "Light Mode",
+                    fontSize = 12.sp, color = SteelBlueDark.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+
+                Spacer(Modifier.weight(1f))
+
+                // Sign out at bottom
+                Button(
+                    onClick = onSignOut,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SteelBlueDark,
+                        contentColor = Cream
+                    ),
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Text("Sign Out", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ProfilePage(
     profile: Profile?,
@@ -281,6 +407,10 @@ private fun ProfilePage(
     onSignOut: () -> Unit
 ) {
     var showHobbyPicker by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
+    var isDarkMode by remember { mutableStateOf(false) }
+
+    val interestChipColor = Teal.copy(alpha = 0.72f)
 
     Box(
         modifier = Modifier.fillMaxSize().background(
@@ -294,7 +424,6 @@ private fun ProfilePage(
             )
         )
     ) {
-        // Decorative background routes
         ProfileBackground()
 
         if (isLoading) {
@@ -302,167 +431,158 @@ private fun ProfilePage(
         } else if (profile != null) {
             Column(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                    .padding(top = 16.dp, bottom = 100.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(top = 16.dp, bottom = 100.dp)
             ) {
-                Spacer(Modifier.height(28.dp))
+                // ── Settings gear button top-right ──────────────────────────
+                Box(modifier = Modifier.fillMaxWidth().padding(end = 16.dp, top = 12.dp)) {
+                    IconButton(
+                        onClick = { showSettings = true },
+                        modifier = Modifier.align(Alignment.TopEnd).size(44.dp)
+                            .shadow(4.dp, CircleShape)
+                            .background(Cream.copy(alpha = 0.85f), CircleShape)
+                    ) {
+                        SettingsIcon(tint = SteelBlueDark, modifier = Modifier.size(22.dp))
+                    }
+                }
 
-                // ── Header card: avatar + name + country ─────────────────────
+                Spacer(Modifier.height(8.dp))
+
+                // ── Header: photo left + name below, stats right ────────────
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                    shape = RoundedCornerShape(28.dp),
+                    shape = RoundedCornerShape(24.dp),
                     elevation = CardDefaults.cardElevation(6.dp),
                     colors = CardDefaults.cardColors(containerColor = Cream.copy(alpha = 0.85f))
                 ) {
-                    // Teal accent bar at the top of the card
                     Box(modifier = Modifier.fillMaxWidth().height(4.dp)
                         .background(Brush.horizontalGradient(listOf(SteelBlue, Teal, Mint))))
 
-                    Column(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Row(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp).fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
                     ) {
-                        // Avatar with gradient ring
-                        Box(contentAlignment = Alignment.Center) {
-                            Box(modifier = Modifier.size(120.dp).clip(CircleShape)
-                                .background(Brush.sweepGradient(listOf(SteelBlue, Teal, Mint, CreamDark, SteelBlue))))
-                            Box(
-                                modifier = Modifier.size(110.dp)
-                                    .shadow(10.dp, CircleShape, ambientColor = SteelBlue.copy(alpha = 0.4f))
-                                    .clip(CircleShape).background(SteelBlueLight.copy(alpha = 0.35f)),
-                                contentAlignment = Alignment.Center
+                        // Left: avatar + name
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Box(modifier = Modifier.size(100.dp).clip(CircleShape)
+                                    .background(Brush.sweepGradient(listOf(SteelBlue, Teal, Mint, CreamDark, SteelBlue))))
+                                Box(
+                                    modifier = Modifier.size(92.dp)
+                                        .shadow(8.dp, CircleShape, ambientColor = SteelBlue.copy(alpha = 0.4f))
+                                        .clip(CircleShape).background(SteelBlueLight.copy(alpha = 0.35f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (!profile.avatarUrl.isNullOrBlank()) {
+                                        AsyncImage(model = profile.avatarUrl, contentDescription = "Profile photo",
+                                            contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
+                                    } else {
+                                        ProfileIcon(tint = Cream, modifier = Modifier.size(44.dp))
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            Text(profile.username, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = SteelBlueDark)
+                            profile.fullName?.let {
+                                Text(it, fontSize = 12.sp, color = SteelBlue, fontWeight = FontWeight.Medium)
+                            }
+                        }
+
+                        Spacer(Modifier.width(20.dp))
+
+                        // Right: friends + trips stats
+                        Column(
+                            modifier = Modifier.weight(1f).padding(top = 10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Friends
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                elevation = CardDefaults.cardElevation(3.dp),
+                                colors = CardDefaults.cardColors(containerColor = Teal.copy(alpha = 0.15f))
                             ) {
-                                if (!profile.avatarUrl.isNullOrBlank()) {
-                                    AsyncImage(model = profile.avatarUrl, contentDescription = "Profile photo",
-                                        contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
-                                } else {
-                                    ProfileIcon(tint = Cream, modifier = Modifier.size(54.dp))
+                                Column(
+                                    Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("0", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = Teal)
+                                    Text("Friends", fontSize = 11.sp, color = TealDark.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold)
                                 }
                             }
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        // Username
-                        Text(profile.username, fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = SteelBlueDark)
-
-                        profile.fullName?.let {
-                            Text(it, fontSize = 14.sp, color = SteelBlue, fontWeight = FontWeight.Medium)
-                        }
-
-                        // Country pill
-                        profile.country?.let {
-                            Spacer(Modifier.height(8.dp))
-                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp))
-                                .background(Brush.horizontalGradient(listOf(Teal.copy(alpha = 0.2f), Mint.copy(alpha = 0.15f))))
-                                .padding(horizontal = 14.dp, vertical = 5.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.LocationOn, null, tint = Teal, modifier = Modifier.size(14.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(it, fontSize = 13.sp, color = TealDark, fontWeight = FontWeight.SemiBold)
+                            // Trips
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                elevation = CardDefaults.cardElevation(3.dp),
+                                colors = CardDefaults.cardColors(containerColor = SteelBlue.copy(alpha = 0.15f))
+                            ) {
+                                Column(
+                                    Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("0", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = SteelBlue)
+                                    Text("Trips", fontSize = 11.sp, color = SteelBlueDark.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(20.dp))
 
-                // ── Bio — travel journal style ───────────────────────────────
-                profile.bio?.let { bio ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                        shape = RoundedCornerShape(22.dp),
-                        elevation = CardDefaults.cardElevation(4.dp),
-                        colors = CardDefaults.cardColors(containerColor = Mint.copy(alpha = 0.2f))
-                    ) {
-                        Row(Modifier.padding(18.dp)) {
-                            // Decorative travel quote bar
-                            Box(modifier = Modifier.width(4.dp).height(60.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(Brush.verticalGradient(listOf(Teal, Mint))))
-                            Spacer(Modifier.width(14.dp))
-                            Column {
-                                Text("Travel Journal", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                    color = TealDark, letterSpacing = 1.5.sp)
-                                Spacer(Modifier.height(6.dp))
-                                Text(bio, fontSize = 14.sp, lineHeight = 21.sp, color = TextDark)
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
-
-                // ── Passport stamps (stats) ──────────────────────────────────
-                Text("Passport Stamps", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                    color = SteelBlueDark.copy(alpha = 0.5f), letterSpacing = 2.sp,
-                    modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth())
-                Spacer(Modifier.height(8.dp))
-
-                Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), Arrangement.spacedBy(10.dp)) {
-                    PassportStamp(emoji = "✈", label = "Trips", value = "0", color = SteelBlue, modifier = Modifier.weight(1f))
-                    PassportStamp(emoji = "🤝", label = "Friends", value = "0", color = Teal, modifier = Modifier.weight(1f))
-                    PassportStamp(emoji = "🌍", label = "Groups", value = "0", color = Mint, modifier = Modifier.weight(1f))
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // ── Hobbies — suitcase stickers style ────────────────────────
+                // ── Interests ────────────────────────────────────────────────
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                     shape = RoundedCornerShape(22.dp),
                     elevation = CardDefaults.cardElevation(4.dp),
-                    colors = CardDefaults.cardColors(containerColor = CreamDark.copy(alpha = 0.2f))
+                    colors = CardDefaults.cardColors(containerColor = CreamDark.copy(alpha = 0.18f))
                 ) {
                     Column(Modifier.padding(18.dp)) {
-                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("🏷", fontSize = 16.sp)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Travel Interests", fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                                    color = SteelBlueDark, letterSpacing = 0.5.sp)
-                            }
-                            Box(modifier = Modifier.clip(RoundedCornerShape(12.dp))
-                                .background(Brush.horizontalGradient(listOf(SteelBlue, Teal)))
-                                .clickable { onLoadAllInterests(); showHobbyPicker = true }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Add, null, tint = Cream, modifier = Modifier.size(14.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Add", fontSize = 12.sp, color = Cream, fontWeight = FontWeight.SemiBold)
-                                }
-                            }
-                        }
+                        Text("Interests", fontSize = 16.sp, fontWeight = FontWeight.Bold,
+                            color = SteelBlueDark, letterSpacing = 0.5.sp)
+
                         if (userInterests.isNotEmpty()) {
                             Spacer(Modifier.height(14.dp))
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(userInterests) { interest ->
-                                    val chipColor = chipColorForIndex(interest.id)
-                                    Box(modifier = Modifier.clip(RoundedCornerShape(14.dp))
-                                        .background(chipColor.copy(alpha = 0.82f))
-                                        .border(1.dp, chipColor, RoundedCornerShape(14.dp))
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)) {
-                                        Text(interest.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Cream)
+                            // Wrap interests in rows
+                            val chunked = userInterests.chunked(3)
+                            chunked.forEach { rowItems ->
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                ) {
+                                    rowItems.forEach { interest ->
+                                        Box(modifier = Modifier.clip(RoundedCornerShape(14.dp))
+                                            .background(interestChipColor)
+                                            .padding(horizontal = 14.dp, vertical = 8.dp)) {
+                                            Text(interest.name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Cream)
+                                        }
                                     }
                                 }
                             }
                         } else {
                             Spacer(Modifier.height(14.dp))
-                            Text("Your suitcase is empty — add some stickers!",
+                            Text("No interests yet — add some!",
                                 fontSize = 13.sp, color = SteelBlue.copy(alpha = 0.5f),
                                 modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                         }
+
+                        Spacer(Modifier.height(14.dp))
+
+                        // Add button below interests
+                        Button(
+                            onClick = { onLoadAllInterests(); showHobbyPicker = true },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = SteelBlue,
+                                contentColor = Cream
+                            ),
+                            modifier = Modifier.fillMaxWidth().height(44.dp)
+                        ) {
+                            Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Add Interests", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        }
                     }
                 }
-
-                Spacer(Modifier.height(24.dp))
-
-                // ── Sign out ─────────────────────────────────────────────────
-                OutlinedButton(onClick = onSignOut, shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = SteelBlueDark),
-                    border = BorderStroke(1.5.dp, Brush.linearGradient(listOf(SteelBlue, Teal))),
-                    modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth()
-                ) { Text("Sign Out", fontWeight = FontWeight.SemiBold) }
             }
         } else {
             Text("Could not load profile", color = SteelBlueDark, modifier = Modifier.align(Alignment.Center))
@@ -477,35 +597,19 @@ private fun ProfilePage(
                     onDismiss = { showHobbyPicker = false })
             }
         }
-    }
-}
 
-// Passport stamp style stat card
-@Composable
-private fun PassportStamp(emoji: String, label: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    Card(
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.cardElevation(3.dp),
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
-        modifier = modifier
-    ) {
-        Column(
-            Modifier.padding(vertical = 14.dp, horizontal = 8.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(emoji, fontSize = 20.sp)
-            Spacer(Modifier.height(4.dp))
-            Text(value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = color)
-            Text(label, fontSize = 10.sp, color = color.copy(alpha = 0.7f), fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
+        // Settings overlay
+        if (showSettings) {
+            SettingsSheet(
+                isDarkMode = isDarkMode,
+                onToggleDarkMode = { isDarkMode = !isDarkMode },
+                onSignOut = onSignOut,
+                onDismiss = { showSettings = false }
+            )
         }
     }
 }
 
-// Kept for backwards compat if needed elsewhere
-@Composable
-private fun StatCard(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    PassportStamp(emoji = "", label = label, value = value, color = color, modifier = modifier)
-}
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  CALENDAR PAGE (placeholder — replaces Explore)
@@ -562,27 +666,20 @@ fun MainScreen(
     val allInterests by profileViewModel.allInterests.collectAsState()
     val events by eventViewModel.events.collectAsState()
 
-    // 0 = profile, 1 = map, 2 = calendar
+    // 0 = calendar, 1 = map, 2 = profile
     var selectedTab by remember { mutableStateOf(1) }
 
-    Box(
-        modifier = modifier.fillMaxSize().pointerInput(selectedTab) {
-            detectHorizontalDragGestures { _, dragAmount ->
-                if (dragAmount < -40f && selectedTab < 2) selectedTab++
-                else if (dragAmount > 40f && selectedTab > 0) selectedTab--
-            }
-        }
-    ) {
+    Box(modifier = modifier.fillMaxSize()) {
         when (selectedTab) {
-            0 -> ProfilePage(
+            0 -> CalendarPage()
+            1 -> MapPage(events = events, onEventClick = {}, onPlaceClick = {})
+            2 -> ProfilePage(
                 profile = profile, isLoading = isLoading, userInterests = userInterests,
                 allInterests = allInterests,
                 onAddHobbies = { ids -> profileViewModel.setUserInterests(userId, ids) },
                 onLoadAllInterests = { profileViewModel.loadAllInterests() },
                 onSignOut = onSignOut
             )
-            1 -> MapPage(events = events, onEventClick = {}, onPlaceClick = {})
-            2 -> CalendarPage()
         }
 
         // Top buttons (map only)
@@ -608,10 +705,10 @@ fun MainScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // LEFT — Profile
+                // LEFT — Calendar
                 IconButton(onClick = { selectedTab = 0 }, modifier = Modifier.size(52.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ProfileIcon(tint = if (selectedTab == 0) SteelBlue else SteelBlueLight.copy(alpha = 0.6f),
+                        CalendarIcon(tint = if (selectedTab == 0) SteelBlue else SteelBlueLight.copy(alpha = 0.6f),
                             modifier = Modifier.size(26.dp))
                         if (selectedTab == 0) SelectedDot()
                     }
@@ -626,10 +723,10 @@ fun MainScreen(
                     }
                 }
 
-                // RIGHT — Calendar / Events
+                // RIGHT — Profile
                 IconButton(onClick = { selectedTab = 2 }, modifier = Modifier.size(52.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CalendarIcon(tint = if (selectedTab == 2) SteelBlue else SteelBlueLight.copy(alpha = 0.6f),
+                        ProfileIcon(tint = if (selectedTab == 2) SteelBlue else SteelBlueLight.copy(alpha = 0.6f),
                             modifier = Modifier.size(26.dp))
                         if (selectedTab == 2) SelectedDot()
                     }
