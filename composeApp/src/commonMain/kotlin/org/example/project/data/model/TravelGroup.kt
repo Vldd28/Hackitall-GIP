@@ -1,0 +1,28 @@
+package org.example.project.data.model
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class TravelGroup(
+    val id: String,
+    val name: String,
+    val description: String? = null,
+    @SerialName("creator_id") val creatorId: String? = null,
+    val destination: String,
+    val lat: Double? = null,
+    val lng: Double? = null,
+    @SerialName("start_date") val startDate: String? = null,
+    @SerialName("end_date") val endDate: String? = null,
+    @SerialName("max_members") val maxMembers: Int = 10,
+    @SerialName("is_open") val isOpen: Boolean = true,
+    @SerialName("created_at") val createdAt: String? = null
+)
+
+@Serializable
+data class TravelGroupMember(
+    @SerialName("group_id") val groupId: String,
+    @SerialName("profile_id") val profileId: String,
+    val role: String = "member", // "admin" | "member"
+    @SerialName("joined_at") val joinedAt: String? = null
+)

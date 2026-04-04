@@ -1,0 +1,36 @@
+package org.example.project.data.model
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class Event(
+    val id: String,
+    @SerialName("creator_id") val creatorId: String? = null,
+    @SerialName("group_id") val groupId: String? = null,
+    val title: String,
+    val description: String? = null,
+    @SerialName("location_name") val locationName: String,
+    val lat: Double,
+    val lng: Double,
+    @SerialName("date_time") val dateTime: String,
+    @SerialName("max_participants") val maxParticipants: Int = 10,
+    @SerialName("is_public") val isPublic: Boolean = true,
+    @SerialName("key_interests") val keyInterests: List<Int> = emptyList(),
+    @SerialName("created_at") val createdAt: String? = null
+)
+
+@Serializable
+enum class ParticipantStatus {
+    @SerialName("joined") joined,
+    @SerialName("pending") pending,
+    @SerialName("declined") declined
+}
+
+@Serializable
+data class EventParticipant(
+    @SerialName("event_id") val eventId: String,
+    @SerialName("profile_id") val profileId: String,
+    val status: ParticipantStatus = ParticipantStatus.joined,
+    @SerialName("joined_at") val joinedAt: String? = null
+)
