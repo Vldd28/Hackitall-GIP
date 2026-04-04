@@ -7,7 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -32,134 +31,209 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.example.project.viewmodel.AuthUiState
+import androidx.compose.foundation.verticalScroll
 
-// ── Palette ───────────────────────────────────────────────────────────────────
+// ── Palette ──────────────────────────────────────────────────────────────────
 private val SteelBlue     = Color(0xFF80A1BA)
 private val SteelBlueDark = Color(0xFF4A6E85)
 private val Teal          = Color(0xFF91C4C3)
 private val Mint          = Color(0xFFB4DEBD)
 private val Cream         = Color(0xFFFFF7DD)
 
-// ── Background: dotted winding roads with planes ─────────────────────────────
+// ── Side-view plane at end of dotted route ───────────────────────────────────
 
-private fun DrawScope.drawPlane(center: Offset, sizePx: Float, angle: Float, color: Color) {
+private fun DrawScope.drawSidePlane(center: Offset, s: Float, angle: Float, color: Color) {
     rotate(angle, pivot = center) {
-        val path = Path().apply {
+        val p = Path().apply {
             // Fuselage
-            moveTo(center.x, center.y - sizePx * 0.5f)
-            lineTo(center.x + sizePx * 0.06f, center.y + sizePx * 0.5f)
-            lineTo(center.x - sizePx * 0.06f, center.y + sizePx * 0.5f)
+            moveTo(center.x, center.y - s * 0.5f)
+            lineTo(center.x + s * 0.08f, center.y + s * 0.5f)
+            lineTo(center.x - s * 0.08f, center.y + s * 0.5f)
             close()
             // Left wing
-            moveTo(center.x - sizePx * 0.04f, center.y + sizePx * 0.05f)
-            lineTo(center.x - sizePx * 0.45f, center.y + sizePx * 0.2f)
-            lineTo(center.x - sizePx * 0.04f, center.y + sizePx * 0.18f)
+            moveTo(center.x - s * 0.06f, center.y + s * 0.02f)
+            lineTo(center.x - s * 0.55f, center.y + s * 0.24f)
+            lineTo(center.x - s * 0.06f, center.y + s * 0.22f)
             close()
             // Right wing
-            moveTo(center.x + sizePx * 0.04f, center.y + sizePx * 0.05f)
-            lineTo(center.x + sizePx * 0.45f, center.y + sizePx * 0.2f)
-            lineTo(center.x + sizePx * 0.04f, center.y + sizePx * 0.18f)
+            moveTo(center.x + s * 0.06f, center.y + s * 0.02f)
+            lineTo(center.x + s * 0.55f, center.y + s * 0.24f)
+            lineTo(center.x + s * 0.06f, center.y + s * 0.22f)
             close()
-            // Tail left
-            moveTo(center.x - sizePx * 0.03f, center.y + sizePx * 0.38f)
-            lineTo(center.x - sizePx * 0.18f, center.y + sizePx * 0.48f)
-            lineTo(center.x - sizePx * 0.03f, center.y + sizePx * 0.44f)
+            // Left tail
+            moveTo(center.x - s * 0.05f, center.y + s * 0.36f)
+            lineTo(center.x - s * 0.28f, center.y + s * 0.50f)
+            lineTo(center.x - s * 0.05f, center.y + s * 0.46f)
             close()
-            // Tail right
-            moveTo(center.x + sizePx * 0.03f, center.y + sizePx * 0.38f)
-            lineTo(center.x + sizePx * 0.18f, center.y + sizePx * 0.48f)
-            lineTo(center.x + sizePx * 0.03f, center.y + sizePx * 0.44f)
+            // Right tail
+            moveTo(center.x + s * 0.05f, center.y + s * 0.36f)
+            lineTo(center.x + s * 0.28f, center.y + s * 0.50f)
+            lineTo(center.x + s * 0.05f, center.y + s * 0.46f)
             close()
         }
-        drawPath(path, color = color, style = Fill)
+        drawPath(p, color = color, style = Fill)
     }
 }
+
+// ── Side-view locomotive ─────────────────────────────────────────────────────
+
+private fun DrawScope.drawLocomotive(cx: Float, cy: Float, locoWidth: Float) {
+    val lw = locoWidth
+    val bodyH = lw * 0.22f
+    val bodyY = cy - bodyH / 2f
+    val bodyLeft = cx - lw * 0.45f
+    val bodyRight = cx + lw * 0.45f
+
+    // ── Boiler (main body — long rectangle with rounded front) ───────────
+    val boilerPath = Path().apply {
+        moveTo(bodyLeft + lw * 0.08f, bodyY)
+        lineTo(bodyRight - lw * 0.05f, bodyY)
+        // Rounded front (right side)
+        cubicTo(
+            bodyRight + lw * 0.02f, bodyY,
+            bodyRight + lw * 0.04f, bodyY + bodyH * 0.5f,
+            bodyRight - lw * 0.05f, bodyY + bodyH
+        )
+        lineTo(bodyLeft + lw * 0.08f, bodyY + bodyH)
+        close()
+    }
+    drawPath(boilerPath, color = Teal, style = Fill)
+
+    // ── Cab (back section — taller box) ──────────────────────────────────
+    val cabW = lw * 0.18f
+    val cabH = bodyH * 1.55f
+    val cabLeft = bodyLeft
+    val cabTop = bodyY + bodyH - cabH
+    drawRoundRect(
+        color = Teal.copy(alpha = 0.9f),
+        topLeft = Offset(cabLeft, cabTop),
+        size = androidx.compose.ui.geometry.Size(cabW, cabH),
+        cornerRadius = androidx.compose.ui.geometry.CornerRadius(lw * 0.02f)
+    )
+    // Cab window
+    drawRoundRect(
+        color = SteelBlueDark.copy(alpha = 0.7f),
+        topLeft = Offset(cabLeft + cabW * 0.2f, cabTop + cabH * 0.15f),
+        size = androidx.compose.ui.geometry.Size(cabW * 0.6f, cabH * 0.3f),
+        cornerRadius = androidx.compose.ui.geometry.CornerRadius(lw * 0.01f)
+    )
+
+    // ── Smokestack (chimney) ─────────────────────────────────────────────
+    val stackX = bodyRight - lw * 0.14f
+    val stackW = lw * 0.05f
+    val stackH = bodyH * 0.5f
+    drawRoundRect(
+        color = SteelBlue,
+        topLeft = Offset(stackX - stackW / 2, bodyY - stackH),
+        size = androidx.compose.ui.geometry.Size(stackW, stackH),
+        cornerRadius = androidx.compose.ui.geometry.CornerRadius(lw * 0.01f)
+    )
+    // Stack top (wider cap)
+    drawRoundRect(
+        color = SteelBlue,
+        topLeft = Offset(stackX - stackW * 0.8f, bodyY - stackH - lw * 0.015f),
+        size = androidx.compose.ui.geometry.Size(stackW * 1.6f, lw * 0.025f),
+        cornerRadius = androidx.compose.ui.geometry.CornerRadius(lw * 0.005f)
+    )
+
+    // ── Dome on boiler ───────────────────────────────────────────────────
+    val domeX = cx
+    drawOval(
+        color = Teal.copy(alpha = 0.8f),
+        topLeft = Offset(domeX - lw * 0.04f, bodyY - bodyH * 0.22f),
+        size = androidx.compose.ui.geometry.Size(lw * 0.08f, bodyH * 0.28f)
+    )
+
+    // ── Cowcatcher (front, right side) ───────────────────────────────────
+    val cowPath = Path().apply {
+        moveTo(bodyRight - lw * 0.05f, bodyY + bodyH)
+        lineTo(bodyRight + lw * 0.06f, bodyY + bodyH + bodyH * 0.2f)
+        lineTo(bodyRight - lw * 0.05f, bodyY + bodyH + bodyH * 0.2f)
+        close()
+    }
+    drawPath(cowPath, color = SteelBlue, style = Fill)
+
+    // ── Wheels ───────────────────────────────────────────────────────────
+    val wheelY = bodyY + bodyH + bodyH * 0.05f
+    val bigR = bodyH * 0.28f
+    val smallR = bodyH * 0.18f
+
+    // 3 big drive wheels
+    for (i in 0..2) {
+        val wx = bodyLeft + cabW + lw * 0.06f + i * (lw * 0.16f)
+        drawCircle(color = SteelBlue, radius = bigR, center = Offset(wx, wheelY))
+        drawCircle(color = SteelBlueDark, radius = bigR * 0.45f, center = Offset(wx, wheelY))
+    }
+    // 1 small front wheel
+    drawCircle(color = SteelBlue, radius = smallR, center = Offset(bodyRight - lw * 0.04f, wheelY + bigR - smallR))
+    drawCircle(color = SteelBlueDark, radius = smallR * 0.45f, center = Offset(bodyRight - lw * 0.04f, wheelY + bigR - smallR))
+
+    // ── Connecting rod (line between big wheels) ─────────────────────────
+    val rodY = wheelY
+    drawLine(
+        color = SteelBlueDark.copy(alpha = 0.6f),
+        start = Offset(bodyLeft + cabW + lw * 0.06f, rodY),
+        end = Offset(bodyLeft + cabW + lw * 0.06f + 2 * (lw * 0.16f), rodY),
+        strokeWidth = lw * 0.012f
+    )
+
+    // ── Undercarriage strip ──────────────────────────────────────────────
+    drawRect(
+        color = SteelBlue.copy(alpha = 0.5f),
+        topLeft = Offset(bodyLeft, bodyY + bodyH),
+        size = androidx.compose.ui.geometry.Size(bodyRight - bodyLeft + lw * 0.06f, bodyH * 0.08f)
+    )
+}
+
+// ── Background: dotted routes + big planes ───────────────────────────────────
 
 @Composable
 private fun TravelRoutesBackground() {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
         val h = size.height
-        val dash = PathEffect.dashPathEffect(floatArrayOf(14f, 12f), 0f)
-        val routeStroke = Stroke(width = 3f, pathEffect = dash, cap = StrokeCap.Round)
+        val dash = PathEffect.dashPathEffect(floatArrayOf(24f, 16f), 0f)
+        val routeStroke = Stroke(width = 7f, pathEffect = dash, cap = StrokeCap.Round)
+        val planeSize = w * 0.22f
 
-        // ── Route 1: top-left → curves down through center → bottom-right ───
+        // Route 1: top-left plane → curves down through center → bottom-right
+        val p1 = Offset(w * 0.12f, h * 0.08f)
         val r1 = Path().apply {
-            moveTo(0f, h * 0.12f)
-            cubicTo(w * 0.15f, h * 0.08f, w * 0.25f, h * 0.22f, w * 0.38f, h * 0.28f)
-            cubicTo(w * 0.50f, h * 0.34f, w * 0.55f, h * 0.52f, w * 0.62f, h * 0.60f)
-            cubicTo(w * 0.70f, h * 0.70f, w * 0.85f, h * 0.72f, w * 1.05f, h * 0.65f)
+            moveTo(p1.x, p1.y)
+            cubicTo(w * 0.22f, h * 0.20f, w * 0.35f, h * 0.32f, w * 0.48f, h * 0.42f)
+            cubicTo(w * 0.62f, h * 0.52f, w * 0.78f, h * 0.58f, w * 0.92f, h * 0.70f)
         }
-        drawPath(r1, color = Teal.copy(alpha = 0.55f), style = routeStroke)
+        drawPath(r1, color = Teal.copy(alpha = 0.6f), style = routeStroke)
+        drawSidePlane(center = p1, s = planeSize, angle = -38f, color = Teal.copy(alpha = 0.75f))
 
-        // ── Route 2: top-right → winding down → exits bottom-left ───────────
+        // Route 2: top-right plane → winding to bottom-left
+        val p2 = Offset(w * 0.90f, h * 0.05f)
         val r2 = Path().apply {
-            moveTo(w * 0.92f, -h * 0.02f)
-            cubicTo(w * 0.88f, h * 0.12f, w * 0.72f, h * 0.18f, w * 0.60f, h * 0.32f)
-            cubicTo(w * 0.48f, h * 0.46f, w * 0.35f, h * 0.55f, w * 0.25f, h * 0.68f)
-            cubicTo(w * 0.15f, h * 0.80f, w * 0.08f, h * 0.88f, -w * 0.05f, h * 0.92f)
+            moveTo(p2.x, p2.y)
+            cubicTo(w * 0.82f, h * 0.18f, w * 0.60f, h * 0.28f, w * 0.45f, h * 0.40f)
+            cubicTo(w * 0.30f, h * 0.52f, w * 0.15f, h * 0.68f, w * 0.05f, h * 0.82f)
         }
-        drawPath(r2, color = Teal.copy(alpha = 0.45f), style = routeStroke)
+        drawPath(r2, color = Teal.copy(alpha = 0.48f), style = routeStroke)
+        drawSidePlane(center = p2, s = planeSize * 0.9f, angle = 195f, color = Teal.copy(alpha = 0.65f))
 
-        // ── Route 3: left side → sweeps right → exits bottom ────────────────
+        // Route 3: bottom-right plane → curves left
+        val p3 = Offset(w * 0.92f, h * 0.92f)
         val r3 = Path().apply {
-            moveTo(-w * 0.03f, h * 0.55f)
-            cubicTo(w * 0.12f, h * 0.50f, w * 0.30f, h * 0.42f, w * 0.45f, h * 0.48f)
-            cubicTo(w * 0.60f, h * 0.54f, w * 0.70f, h * 0.70f, w * 0.75f, h * 0.88f)
-            cubicTo(w * 0.78f, h * 0.98f, w * 0.80f, h * 1.06f, w * 0.82f, h * 1.12f)
+            moveTo(w * 0.05f, h * 0.55f)
+            cubicTo(w * 0.20f, h * 0.50f, w * 0.45f, h * 0.62f, w * 0.65f, h * 0.70f)
+            cubicTo(w * 0.78f, h * 0.76f, w * 0.88f, h * 0.84f, p3.x, p3.y)
         }
-        drawPath(r3, color = Teal.copy(alpha = 0.35f), style = routeStroke)
+        drawPath(r3, color = Teal.copy(alpha = 0.42f), style = routeStroke)
+        drawSidePlane(center = p3, s = planeSize * 0.85f, angle = 130f, color = Teal.copy(alpha = 0.55f))
 
-        // ── Route 4: top → gentle S-curve through center ────────────────────
+        // Route 4: bottom-left plane → curves up right
+        val p4 = Offset(w * 0.10f, h * 0.94f)
         val r4 = Path().apply {
-            moveTo(w * 0.35f, -h * 0.04f)
-            cubicTo(w * 0.40f, h * 0.10f, w * 0.20f, h * 0.25f, w * 0.30f, h * 0.40f)
-            cubicTo(w * 0.40f, h * 0.55f, w * 0.65f, h * 0.58f, w * 0.55f, h * 0.78f)
-            cubicTo(w * 0.48f, h * 0.90f, w * 0.42f, h * 1.02f, w * 0.40f, h * 1.10f)
+            moveTo(p4.x, p4.y)
+            cubicTo(w * 0.25f, h * 0.82f, w * 0.42f, h * 0.72f, w * 0.55f, h * 0.58f)
         }
-        drawPath(r4, color = Teal.copy(alpha = 0.3f), style = routeStroke)
-
-        // ── Planes at endpoints ─────────────────────────────────────────────
-
-        // Plane 1: top-left corner area (visible near the card's top-left)
-        drawPlane(
-            center = Offset(w * 0.08f, h * 0.14f),
-            sizePx = w * 0.09f,
-            angle = -35f,
-            color = Teal.copy(alpha = 0.7f)
-        )
-
-        // Plane 2: top-right, partially visible
-        drawPlane(
-            center = Offset(w * 0.90f, h * 0.02f),
-            sizePx = w * 0.08f,
-            angle = 200f,
-            color = Teal.copy(alpha = 0.55f)
-        )
-
-        // Plane 3: bottom-right
-        drawPlane(
-            center = Offset(w * 1.02f, h * 0.64f),
-            sizePx = w * 0.10f,
-            angle = 120f,
-            color = Teal.copy(alpha = 0.5f)
-        )
-
-        // Plane 4: bottom-left
-        drawPlane(
-            center = Offset(-w * 0.02f, h * 0.90f),
-            sizePx = w * 0.08f,
-            angle = -150f,
-            color = Teal.copy(alpha = 0.45f)
-        )
-
-        // Plane 5: center-bottom (peeks from below card)
-        drawPlane(
-            center = Offset(w * 0.75f, h * 0.86f),
-            sizePx = w * 0.07f,
-            angle = 160f,
-            color = Teal.copy(alpha = 0.4f)
-        )
+        drawPath(r4, color = Teal.copy(alpha = 0.38f), style = routeStroke)
+        drawSidePlane(center = p4, s = planeSize * 0.8f, angle = -155f, color = Teal.copy(alpha = 0.5f))
     }
 }
 
@@ -179,14 +253,10 @@ fun AuthScreen(
     var username by remember { mutableStateOf("") }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SteelBlue)
+        modifier = modifier.fillMaxSize().background(SteelBlue)
     ) {
-        // Dotted route lines + planes
         TravelRoutesBackground()
 
-        // Scrollable content so keyboard doesn't hide fields
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -198,27 +268,42 @@ fun AuthScreen(
         ) {
             Spacer(Modifier.weight(1f))
 
-            // ── Title above the card ─────────────────────────────────────
-            Text(
-                "Wandr",
-                fontSize = 46.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Cream
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "Find your adventure buddies",
-                fontSize = 14.sp,
-                color = Cream.copy(alpha = 0.75f)
-            )
+            // ── Locomotive with app name ─────────────────────────────────
+            Box(
+                modifier = Modifier
+                    .widthIn(max = 400.dp)
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawLocomotive(
+                        cx = size.width * 0.5f,
+                        cy = size.height * 0.55f,
+                        locoWidth = size.width * 0.92f
+                    )
+                }
+                // App name on top of the locomotive body
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Wandr",
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Cream
+                    )
+                    Text(
+                        "Find your adventure buddies",
+                        fontSize = 12.sp,
+                        color = Cream.copy(alpha = 0.8f)
+                    )
+                }
+            }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
 
             // ── Login card ───────────────────────────────────────────────
             Card(
-                modifier = Modifier
-                    .widthIn(max = 400.dp)
-                    .fillMaxWidth(),
+                modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 colors = CardDefaults.cardColors(containerColor = Mint)
@@ -227,7 +312,6 @@ fun AuthScreen(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Tabs
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -274,110 +358,68 @@ fun AuthScreen(
                         unfocusedContainerColor = Cream.copy(alpha = 0.2f)
                     )
 
-                    // Email
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
+                        value = email, onValueChange = { email = it },
                         label = { Text("Email") },
-                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next
-                        ),
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = fieldColors,
-                        modifier = Modifier.fillMaxWidth()
+                        leadingIcon = { Icon(Icons.Default.Email, null) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                        singleLine = true, shape = RoundedCornerShape(14.dp),
+                        colors = fieldColors, modifier = Modifier.fillMaxWidth()
                     )
-
                     Spacer(Modifier.height(12.dp))
 
-                    // Username (sign up only)
                     if (isSignUp) {
                         OutlinedTextField(
-                            value = username,
-                            onValueChange = { username = it },
+                            value = username, onValueChange = { username = it },
                             label = { Text("Username") },
-                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.Default.Person, null) },
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            singleLine = true,
-                            shape = RoundedCornerShape(14.dp),
-                            colors = fieldColors,
-                            modifier = Modifier.fillMaxWidth()
+                            singleLine = true, shape = RoundedCornerShape(14.dp),
+                            colors = fieldColors, modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(Modifier.height(12.dp))
                     }
 
-                    // Password
                     OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
+                        value = password, onValueChange = { password = it },
                         label = { Text("Password") },
-                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.Default.Lock, null) },
                         visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                if (isSignUp) onSignUp(email, password, username)
-                                else onSignIn(email, password)
-                            }
-                        ),
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = fieldColors,
-                        modifier = Modifier.fillMaxWidth()
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            if (isSignUp) onSignUp(email, password, username) else onSignIn(email, password)
+                        }),
+                        singleLine = true, shape = RoundedCornerShape(14.dp),
+                        colors = fieldColors, modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Button / loading / error
                     when (uiState) {
-                        is AuthUiState.Loading -> {
-                            CircularProgressIndicator(color = SteelBlueDark)
-                        }
+                        is AuthUiState.Loading -> CircularProgressIndicator(color = SteelBlueDark)
                         is AuthUiState.Error -> {
-                            Text(
-                                uiState.message,
-                                color = Color(0xFFBB3333),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            Text(uiState.message, color = Color(0xFFBB3333), style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = onResetError,
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = SteelBlueDark,
-                                    contentColor = Cream
-                                ),
+                            Button(onClick = onResetError, shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = SteelBlueDark, contentColor = Cream),
                                 modifier = Modifier.fillMaxWidth().height(50.dp)
-                            ) {
-                                Text("Try Again", fontWeight = FontWeight.SemiBold)
-                            }
+                            ) { Text("Try Again", fontWeight = FontWeight.SemiBold) }
                         }
                         else -> {
                             Button(
-                                onClick = {
-                                    if (isSignUp) onSignUp(email, password, username)
-                                    else onSignIn(email, password)
-                                },
+                                onClick = { if (isSignUp) onSignUp(email, password, username) else onSignIn(email, password) },
                                 shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = SteelBlueDark,
-                                    contentColor = Cream,
+                                    containerColor = SteelBlueDark, contentColor = Cream,
                                     disabledContainerColor = SteelBlueDark.copy(alpha = 0.35f),
                                     disabledContentColor = Cream.copy(alpha = 0.5f)
                                 ),
                                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                                enabled = email.isNotBlank() && password.isNotBlank() &&
-                                        (!isSignUp || username.isNotBlank())
+                                enabled = email.isNotBlank() && password.isNotBlank() && (!isSignUp || username.isNotBlank())
                             ) {
                                 Text(
                                     if (isSignUp) "Create Account" else "Sign In",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
+                                    fontWeight = FontWeight.Bold, fontSize = 16.sp
                                 )
                             }
                         }
@@ -385,7 +427,7 @@ fun AuthScreen(
                 }
             }
 
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.weight(0.6f))
         }
     }
 }
