@@ -36,6 +36,7 @@ import org.example.project.viewmodel.PlacesViewModel
 
 private val DEFAULT_POSITION = LatLng(44.4268, 26.1025) // Bucharest
 private const val DEFAULT_ZOOM = 14f
+private const val MIN_ZOOM_FOR_PLACES = 14f  // sub acest zoom, pinurile dispar
 
 private val WANDR_MAP_STYLE = MapStyleOptions("""
 [
@@ -92,8 +93,8 @@ private fun PlaceType.pinEmoji(): String = when (this) {
 
 /** Draws a teardrop pin bitmap. Call BitmapDescriptorFactory.fromBitmap() only inside GoogleMap content. */
 private fun createPlaceBitmap(type: PlaceType): Bitmap {
-    val w = 96
-    val h = 128
+    val w = 48
+    val h = 64
     val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
 
@@ -112,10 +113,10 @@ private fun createPlaceBitmap(type: PlaceType): Bitmap {
     canvas.drawCircle(w / 2f, radius, radius * 0.52f, whitePaint)
 
     val emojiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = 28f
+        textSize = 14f
         textAlign = Paint.Align.CENTER
     }
-    canvas.drawText(type.pinEmoji(), w / 2f, radius + 10f, emojiPaint)
+    canvas.drawText(type.pinEmoji(), w / 2f, radius + 5f, emojiPaint)
 
     return bitmap
 }
@@ -147,10 +148,12 @@ actual fun MapView(
 
     val places by placesViewModel.places.collectAsState()
 
-    // Build raw bitmaps outside GoogleMap (no Maps SDK dependency)
+    // Raw bitmaps — no Maps SDK dependency, safe to create here
     val placeBitmaps = remember {
         PlaceType.entries.associateWith { createPlaceBitmap(it) }
     }
+    // Cache for BitmapDescriptor — populated once inside GoogleMap where SDK is ready
+    val placeIcons = remember { mutableMapOf<PlaceType, BitmapDescriptor>() }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(DEFAULT_POSITION, DEFAULT_ZOOM)
@@ -164,17 +167,30 @@ actual fun MapView(
         )
     }
 
+    val currentZoom = cameraPositionState.position.zoom
+    val showPlaces = currentZoom >= MIN_ZOOM_FOR_PLACES
+
+    // Radius scade pe măsură ce zoom-ul crește — 20 rezultate acoperă zona vizibilă
+    fun radiusForZoom(zoom: Float): Double = when {
+        zoom >= 17f -> 300.0
+        zoom >= 16f -> 600.0
+        zoom >= 15f -> 1000.0
+        else        -> 1500.0
+    }
+
     // Load places on first render
     LaunchedEffect(Unit) {
-        val target = cameraPositionState.position.target
-        placesViewModel.loadPlaces(target.latitude, target.longitude)
+        if (showPlaces) {
+            val target = cameraPositionState.position.target
+            placesViewModel.loadPlaces(target.latitude, target.longitude, radiusForZoom(currentZoom))
+        }
     }
 
     // Reload when camera stops moving
     LaunchedEffect(cameraPositionState.isMoving) {
-        if (!cameraPositionState.isMoving) {
+        if (!cameraPositionState.isMoving && showPlaces) {
             val target = cameraPositionState.position.target
-            placesViewModel.loadPlaces(target.latitude, target.longitude)
+            placesViewModel.loadPlaces(target.latitude, target.longitude, radiusForZoom(cameraPositionState.position.zoom))
         }
     }
 
@@ -194,17 +210,20 @@ actual fun MapView(
             )
         }
 
-        // Place markers — custom teardrop pin per type
-        // BitmapDescriptorFactory is called HERE (inside GoogleMap) where Maps SDK is initialized
-        places.forEach { place ->
-            val icon = placeBitmaps[place.type]?.let { BitmapDescriptorFactory.fromBitmap(it) }
-            Marker(
-                state = MarkerState(LatLng(place.lat, place.lng)),
-                title = place.name,
-                snippet = place.address,
-                icon = icon,
-                onClick = { onPlaceClick(place); false }
-            )
+        // Place markers — vizibile doar când zoom >= MIN_ZOOM_FOR_PLACES
+        if (showPlaces) {
+            places.forEach { place ->
+                val icon = placeIcons.getOrPut(place.type) {
+                    BitmapDescriptorFactory.fromBitmap(placeBitmaps[place.type]!!)
+                }
+                Marker(
+                    state = MarkerState(LatLng(place.lat, place.lng)),
+                    title = place.name,
+                    snippet = place.address,
+                    icon = icon,
+                    onClick = { onPlaceClick(place); false }
+                )
+            }
         }
     }
 }
