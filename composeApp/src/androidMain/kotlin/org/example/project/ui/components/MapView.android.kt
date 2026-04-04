@@ -152,6 +152,7 @@ actual fun MapView(
 
     val places by placesViewModel.places.collectAsState()
     var selectedPlace by remember { mutableStateOf<PlaceResult?>(null) }
+    var selectedEvent by remember { mutableStateOf<Event?>(null) }
 
     // Raw bitmaps — no Maps SDK dependency, safe to create here
     val placeBitmaps = remember {
@@ -211,7 +212,7 @@ actual fun MapView(
                 state = MarkerState(LatLng(event.lat, event.lng)),
                 title = event.title,
                 snippet = event.locationName,
-                onClick = { onEventClick(event); false }
+                onClick = { selectedEvent = event; false }
             )
         }
 
@@ -232,7 +233,7 @@ actual fun MapView(
         }
     }
 
-    // Bottom sheet — apare când apeși pe un pin de locație
+    // Bottom sheet — locație
     selectedPlace?.let { place ->
         PlaceBottomSheet(
             place = place,
@@ -240,6 +241,16 @@ actual fun MapView(
             userId = userId,
             apiKey = apiKey,
             onDismiss = { selectedPlace = null }
+        )
+    }
+
+    // Bottom sheet — eveniment
+    selectedEvent?.let { event ->
+        EventBottomSheet(
+            tappedEvent = event,
+            allEvents = events,
+            userId = userId,
+            onDismiss = { selectedEvent = null }
         )
     }
 }
