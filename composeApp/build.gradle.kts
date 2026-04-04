@@ -2,6 +2,44 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+// ── Read .env ────────────────────────────────────────────────────────────────
+fun loadEnv(): Map<String, String> {
+    val envFile = rootProject.file(".env")
+    if (!envFile.exists()) return emptyMap()
+    return envFile.readLines()
+        .filter { it.isNotBlank() && !it.startsWith("#") && "=" in it }
+        .associate { line ->
+            val idx = line.indexOf('=')
+            line.substring(0, idx).trim() to line.substring(idx + 1).trim()
+        }
+}
+
+val env = loadEnv()
+val supabaseUrl: String = env["SUPABASE_URL"] ?: ""
+val supabaseAnonKey: String = env["SUPABASE_ANON_KEY"] ?: ""
+
+// ── Generate SupabaseConfig.kt from .env values ───────────────────────────────
+val generatedSrcDir = layout.buildDirectory.dir("generated/kotlin/commonMain")
+
+val generateSupabaseConfig by tasks.registering {
+    outputs.dir(generatedSrcDir)
+    doFirst {
+        val file = generatedSrcDir.get().asFile
+            .resolve("org/example/project/data/remote/SupabaseConfig.kt")
+        file.parentFile.mkdirs()
+        file.writeText(
+            """
+            package org.example.project.data.remote
+
+            internal object SupabaseConfig {
+                const val URL = "$supabaseUrl"
+                const val ANON_KEY = "$supabaseAnonKey"
+            }
+            """.trimIndent()
+        )
+    }
+}
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
@@ -39,6 +77,9 @@ kotlin {
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
+        }
+        commonMain {
+            kotlin.srcDir(generateSupabaseConfig)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
