@@ -8,76 +8,74 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val LightColorScheme = lightColorScheme(
-    primary = Primary,
-    onPrimary = Color.White,
-    primaryContainer = PrimaryLight,
-    onPrimaryContainer = PrimaryDark,
-    
-    secondary = Secondary,
-    onSecondary = Color.White,
-    secondaryContainer = SecondaryLight,
-    onSecondaryContainer = SecondaryDark,
-    
-    tertiary = Accent,
-    onTertiary = Color.White,
-    tertiaryContainer = AccentLight,
-    onTertiaryContainer = Accent,
-    
-    background = Background,
-    onBackground = TextPrimary,
-    
-    surface = Surface,
-    onSurface = TextPrimary,
-    surfaceVariant = SurfaceVariant,
-    onSurfaceVariant = TextSecondary,
-    
-    error = Error,
-    onError = Color.White,
-    
-    outline = TextDisabled,
-    outlineVariant = Color(0xFFE0E0E0)
+    primary              = WandrSteelBlue,
+    onPrimary            = Color.White,
+    primaryContainer     = WandrSteelBlueLight,
+    onPrimaryContainer   = WandrSteelBlueDark,
+
+    secondary            = WandrTeal,
+    onSecondary          = Color.White,
+    secondaryContainer   = WandrTeal.copy(alpha = 0.3f),
+    onSecondaryContainer = WandrTealDark,
+
+    tertiary             = WandrMint,
+    onTertiary           = TextPrimary,
+    tertiaryContainer    = WandrMint.copy(alpha = 0.3f),
+    onTertiaryContainer  = WandrMintDark,
+
+    background           = Background,
+    onBackground         = TextPrimary,
+
+    surface              = Surface,
+    onSurface            = TextPrimary,
+    surfaceVariant       = SurfaceVariant,
+    onSurfaceVariant     = TextSecondary,
+
+    error                = Error,
+    onError              = Color.White,
+
+    outline              = WandrSteelBlueLight,
+    outlineVariant       = WandrCreamDark
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryLight,
-    onPrimary = Color.Black,
-    primaryContainer = PrimaryDark,
-    onPrimaryContainer = PrimaryLight,
-    
-    secondary = SecondaryLight,
-    onSecondary = Color.Black,
-    secondaryContainer = SecondaryDark,
-    onSecondaryContainer = SecondaryLight,
-    
-    tertiary = AccentLight,
-    onTertiary = Color.Black,
-    tertiaryContainer = Accent,
-    onTertiaryContainer = AccentLight,
-    
-    background = DarkBackground,
-    onBackground = Color.White,
-    
-    surface = DarkSurface,
-    onSurface = Color.White,
-    surfaceVariant = DarkSurfaceVariant,
-    onSurfaceVariant = Color(0xFFB0B0B0),
-    
-    error = Error,
-    onError = Color.White,
-    
-    outline = Color(0xFF616161),
-    outlineVariant = Color(0xFF424242)
+    primary              = WandrTeal,
+    onPrimary            = DarkBackground,
+    primaryContainer     = WandrTealDark,
+    onPrimaryContainer   = WandrTeal,
+
+    secondary            = WandrMint,
+    onSecondary          = DarkBackground,
+    secondaryContainer   = WandrMintDark,
+    onSecondaryContainer = WandrMint,
+
+    tertiary             = WandrCream,
+    onTertiary           = DarkBackground,
+    tertiaryContainer    = WandrCreamDark,
+    onTertiaryContainer  = WandrCream,
+
+    background           = DarkBackground,
+    onBackground         = WandrCream,
+
+    surface              = DarkSurface,
+    onSurface            = WandrCream,
+    surfaceVariant       = DarkSurfaceVariant,
+    onSurfaceVariant     = WandrSteelBlueLight,
+
+    error                = Error,
+    onError              = Color.White,
+
+    outline              = WandrSteelBlue,
+    outlineVariant       = DarkSurfaceVariant
 )
 
 @Composable
-fun TravelCompanionTheme(
+fun WandrTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
         typography = AppTypography,
         content = content
     )
