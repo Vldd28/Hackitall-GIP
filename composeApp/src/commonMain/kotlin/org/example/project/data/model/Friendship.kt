@@ -11,6 +11,9 @@ enum class FriendshipStatus {
 }
 
 @Serializable
+data class FriendshipStatusUpdate(val status: FriendshipStatus)
+
+@Serializable
 data class Friendship(
     @SerialName("requester_id") val requesterId: String,
     @SerialName("receiver_id") val receiverId: String,
