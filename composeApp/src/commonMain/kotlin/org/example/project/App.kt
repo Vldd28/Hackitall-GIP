@@ -9,24 +9,30 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import org.example.project.ui.screens.AuthScreen
 import org.example.project.ui.screens.MainScreen
 import org.example.project.viewmodel.AuthViewModel
+import org.example.project.viewmodel.EventViewModel
+import org.example.project.viewmodel.ProfileViewModel
 
 @Composable
 fun App() {
     MaterialTheme {
-        val viewModel = viewModel { AuthViewModel() }
-        val uiState by viewModel.uiState.collectAsState()
-        val sessionStatus by viewModel.sessionStatus.collectAsState()
+        val authViewModel = viewModel { AuthViewModel() }
+        val profileViewModel = viewModel { ProfileViewModel() }
+        val eventViewModel = viewModel { EventViewModel() }
+        val uiState by authViewModel.uiState.collectAsState()
+        val sessionStatus by authViewModel.sessionStatus.collectAsState()
 
         when (sessionStatus) {
             is SessionStatus.Authenticated -> MainScreen(
                 userId = (sessionStatus as SessionStatus.Authenticated).session.user?.id ?: "unknown",
-                onSignOut = { viewModel.signOut() }
+                onSignOut = { authViewModel.signOut() },
+                profileViewModel = profileViewModel,
+                eventViewModel = eventViewModel
             )
             else -> AuthScreen(
                 uiState = uiState,
-                onSignIn = { email, password -> viewModel.signIn(email, password) },
-                onSignUp = { email, password, username -> viewModel.signUp(email, password, username) },
-                onResetError = { viewModel.resetState() }
+                onSignIn = { email, password -> authViewModel.signIn(email, password) },
+                onSignUp = { email, password, username -> authViewModel.signUp(email, password, username) },
+                onResetError = { authViewModel.resetState() }
             )
         }
     }
