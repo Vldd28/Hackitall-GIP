@@ -100,7 +100,7 @@ fun EventCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    event.keyInterests.take(3).forEach { interestId ->
+                    event.keyInterests.orEmpty().take(3).forEach { interestId ->
                         Box(
                             modifier = Modifier
                                 .size(8.dp)

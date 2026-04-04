@@ -16,7 +16,7 @@ data class Event(
     @SerialName("date_time") val dateTime: String,
     @SerialName("max_participants") val maxParticipants: Int = 10,
     @SerialName("is_public") val isPublic: Boolean = true,
-    @SerialName("key_interests") val keyInterests: List<Int> = emptyList(),
+    @SerialName("key_interests") val keyInterests: List<Int>? = null,
     @SerialName("created_at") val createdAt: String? = null
 )
 
@@ -33,7 +33,7 @@ data class EventInsert(
     @SerialName("date_time") val dateTime: String,
     @SerialName("max_participants") val maxParticipants: Int = 10,
     @SerialName("is_public") val isPublic: Boolean = true,
-    @SerialName("key_interests") val keyInterests: List<Int> = emptyList()
+    @SerialName("key_interests") val keyInterests: List<Int>? = null
 )
 
 @Serializable
