@@ -44,8 +44,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import org.example.project.data.model.Event
 import org.example.project.data.model.Interest
 import org.example.project.data.model.Profile
+import org.example.project.ui.components.MapView
+import org.example.project.viewmodel.EventViewModel
 import org.example.project.viewmodel.ProfileViewModel
 
 // ── palette ───────────────────────────────────────────────────────────────────
@@ -501,12 +504,16 @@ private fun ExplorePage() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  MAP PAGE (beige placeholder)
+//  MAP PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun MapPage() {
-    Box(modifier = Modifier.fillMaxSize().background(Beige))
+private fun MapPage(events: List<Event>, onEventClick: (Event) -> Unit) {
+    MapView(
+        events = events,
+        onEventClick = onEventClick,
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -518,17 +525,20 @@ fun MainScreen(
     onSignOut: () -> Unit,
     userId: String,
     profileViewModel: ProfileViewModel,
+    eventViewModel: EventViewModel,
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(userId) {
         profileViewModel.loadProfile(userId)
         profileViewModel.loadAllInterests()
+        eventViewModel.loadPublicEvents()
     }
 
     val profile by profileViewModel.profile.collectAsState()
     val isLoading by profileViewModel.isLoading.collectAsState()
     val userInterests by profileViewModel.userInterests.collectAsState()
     val allInterests by profileViewModel.allInterests.collectAsState()
+    val events by eventViewModel.events.collectAsState()
 
     var selectedTab by remember { mutableStateOf(1) }
 
@@ -542,7 +552,7 @@ fun MainScreen(
     ) {
         when (selectedTab) {
             0 -> ExplorePage()
-            1 -> MapPage()
+            1 -> MapPage(events = events, onEventClick = {})
             2 -> ProfilePage(
                 profile = profile,
                 isLoading = isLoading,
