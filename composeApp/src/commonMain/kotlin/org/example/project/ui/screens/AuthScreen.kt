@@ -2,6 +2,7 @@ package org.example.project.ui.screens
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.hoverable
@@ -23,6 +24,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,14 +36,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.example.project.viewmodel.AuthUiState
 
-// ── Palette ───────────────────────────────────────────────────────────────────
 private val SteelBlue = Color(0xFF80A1BA)
 private val Teal      = Color(0xFF91C4C3)
 private val Mint      = Color(0xFFB4DEBD)
 private val Cream     = Color(0xFFFFF7DD)
 private val SteelBlueDark = Color(0xFF5A7E9A)
 
-// ── Collage data ──────────────────────────────────────────────────────────────
 private data class Tile(val emoji: String, val city: String, val rotation: Float, val bg: Color)
 
 private val tiles = listOf(
@@ -77,24 +79,16 @@ private fun TravelCollageBackground() {
         val cols = (maxWidth.value / tileW).toInt() + 2
         val rows = (maxHeight.value / tileH).toInt() + 2
 
-        // Warm parchment base
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFD4B896))
-        )
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFD4B896)))
 
         for (row in 0 until rows) {
             for (col in 0 until cols) {
                 val tile = tiles[(row * cols + col) % tiles.size]
-                val offsetX = (col * tileW - 5).dp
-                val offsetY = (row * tileH - 5).dp
-
                 Box(
                     modifier = Modifier
-                        .offset(x = offsetX, y = offsetY)
+                        .offset(x = (col * tileW - 5).dp, y = (row * tileH - 5).dp)
                         .rotate(tile.rotation)
-                        .size(tileW.dp - 12.dp, tileH.dp - 12.dp)
+                        .size((tileW - 12).dp, (tileH - 12).dp)
                         .shadow(4.dp, RoundedCornerShape(4.dp))
                         .background(Color.White, RoundedCornerShape(4.dp))
                         .padding(4.dp)
@@ -110,41 +104,26 @@ private fun TravelCollageBackground() {
                         Text(tile.emoji, fontSize = 28.sp, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = tile.city,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2A3A45),
-                            textAlign = TextAlign.Center,
-                            maxLines = 1
+                            text = tile.city, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2A3A45), textAlign = TextAlign.Center, maxLines = 1
                         )
                     }
                 }
             }
         }
 
-        // Warm amber vignette — gives that grainy 2000s Eurotrip feel
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        0.0f to Color(0x00C8923A),
-                        0.6f to Color(0x22C8923A),
-                        1.0f to Color(0x99A0621A)
-                    )
+            modifier = Modifier.fillMaxSize().background(
+                Brush.radialGradient(
+                    0.0f to Color(0x00C8923A),
+                    0.6f to Color(0x22C8923A),
+                    1.0f to Color(0x99A0621A)
                 )
+            )
         )
-
-        // Slight dark overlay so the card pops
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0x44000000))
-        )
+        Box(modifier = Modifier.fillMaxSize().background(Color(0x44000000)))
     }
 }
-
-// ── Auth Screen ───────────────────────────────────────────────────────────────
 
 @Composable
 fun AuthScreen(
@@ -170,198 +149,98 @@ fun AuthScreen(
     Box(modifier = modifier.fillMaxSize()) {
         TravelCollageBackground()
 
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Card(
                 modifier = Modifier
                     .widthIn(max = 420.dp)
                     .fillMaxWidth(0.88f)
                     .hoverable(hoverSource)
                     .shadow(
-                        elevation = cardElevation,
-                        shape = RoundedCornerShape(24.dp),
+                        elevation = cardElevation, shape = RoundedCornerShape(24.dp),
                         ambientColor = SteelBlue.copy(alpha = 0.5f),
                         spotColor = SteelBlueDark.copy(alpha = 0.6f)
                     )
                     .border(
                         width = 1.5.dp,
-                        brush = Brush.linearGradient(
-                            colors = listOf(SteelBlue.copy(alpha = 0.6f), Teal.copy(alpha = 0.4f), Mint.copy(alpha = 0.5f))
-                        ),
+                        brush = Brush.linearGradient(listOf(SteelBlue.copy(alpha = 0.6f), Teal.copy(alpha = 0.4f), Mint.copy(alpha = 0.5f))),
                         shape = RoundedCornerShape(24.dp)
                     ),
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Cream.copy(alpha = 0.97f)
-                )
+                colors = CardDefaults.cardColors(containerColor = Cream.copy(alpha = 0.97f))
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 28.dp, vertical = 36.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Title
-                    Text(
-                        text = "Wandr",
-                        fontSize = 40.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = SteelBlueDark
-                    )
+                    Text("Wandr", fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = SteelBlueDark)
                     Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Find your adventure buddies",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = SteelBlueDark.copy(alpha = 0.7f)
-                    )
+                    Text("Find your adventure buddies", style = MaterialTheme.typography.bodyMedium, color = SteelBlueDark.copy(alpha = 0.7f))
 
                     Spacer(Modifier.height(28.dp))
 
-                    // Sign In / Sign Up tabs
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = !isSignUp,
-                            onClick = { isSignUp = false; onResetError() },
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = !isSignUp, onClick = { isSignUp = false; onResetError() },
                             label = { Text("Sign In") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = SteelBlue,
-                                selectedLabelColor = Color.White
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                        FilterChip(
-                            selected = isSignUp,
-                            onClick = { isSignUp = true; onResetError() },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = SteelBlue, selectedLabelColor = Color.White),
+                            modifier = Modifier.weight(1f))
+                        FilterChip(selected = isSignUp, onClick = { isSignUp = true; onResetError() },
                             label = { Text("Sign Up") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = SteelBlue,
-                                selectedLabelColor = Color.White
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = SteelBlue, selectedLabelColor = Color.White),
+                            modifier = Modifier.weight(1f))
                     }
 
                     Spacer(Modifier.height(20.dp))
 
-                    // Email
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = SteelBlue) },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next
-                        ),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = SteelBlue,
-                            unfocusedBorderColor = SteelBlue.copy(alpha = 0.4f),
-                            focusedLabelColor = SteelBlue,
-                            cursorColor = SteelBlue
-                        ),
-                        modifier = Modifier.fillMaxWidth()
+                    val fieldColors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = SteelBlue, unfocusedBorderColor = SteelBlue.copy(alpha = 0.4f),
+                        focusedLabelColor = SteelBlue, cursorColor = SteelBlue
                     )
+
+                    OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") },
+                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = SteelBlue) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                        singleLine = true, shape = RoundedCornerShape(12.dp), colors = fieldColors, modifier = Modifier.fillMaxWidth())
 
                     Spacer(Modifier.height(12.dp))
 
-                    // Username (sign up only)
                     if (isSignUp) {
-                        OutlinedTextField(
-                            value = username,
-                            onValueChange = { username = it },
-                            label = { Text("Username") },
+                        OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Username") },
                             leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = SteelBlue) },
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = SteelBlue,
-                                unfocusedBorderColor = SteelBlue.copy(alpha = 0.4f),
-                                focusedLabelColor = SteelBlue,
-                                cursorColor = SteelBlue
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            singleLine = true, shape = RoundedCornerShape(12.dp), colors = fieldColors, modifier = Modifier.fillMaxWidth())
                         Spacer(Modifier.height(12.dp))
                     }
 
-                    // Password
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
+                    OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = SteelBlue) },
                         visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                if (isSignUp) onSignUp(email, password, username)
-                                else onSignIn(email, password)
-                            }
-                        ),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = SteelBlue,
-                            unfocusedBorderColor = SteelBlue.copy(alpha = 0.4f),
-                            focusedLabelColor = SteelBlue,
-                            cursorColor = SteelBlue
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            if (isSignUp) onSignUp(email, password, username) else onSignIn(email, password)
+                        }),
+                        singleLine = true, shape = RoundedCornerShape(12.dp), colors = fieldColors, modifier = Modifier.fillMaxWidth())
 
                     Spacer(Modifier.height(28.dp))
 
-                    // Action area
                     when (uiState) {
                         is AuthUiState.Loading -> CircularProgressIndicator(color = SteelBlue)
                         is AuthUiState.Error -> {
-                            Text(
-                                text = uiState.message,
-                                color = Color(0xFFD64E4E),
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            Text(uiState.message, color = Color(0xFFD64E4E), style = MaterialTheme.typography.bodySmall)
                             Spacer(Modifier.height(8.dp))
-                            Button(
-                                onClick = onResetError,
-                                shape = RoundedCornerShape(12.dp),
+                            Button(onClick = onResetError, shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = SteelBlue),
                                 modifier = Modifier.fillMaxWidth().height(50.dp)
-                            ) {
-                                Text("Try Again", color = Color.White, fontWeight = FontWeight.SemiBold)
-                            }
+                            ) { Text("Try Again", color = Color.White, fontWeight = FontWeight.SemiBold) }
                         }
                         else -> {
                             Button(
-                                onClick = {
-                                    if (isSignUp) onSignUp(email, password, username)
-                                    else onSignIn(email, password)
-                                },
+                                onClick = { if (isSignUp) onSignUp(email, password, username) else onSignIn(email, password) },
                                 shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = SteelBlue,
-                                    disabledContainerColor = SteelBlue.copy(alpha = 0.4f)
-                                ),
+                                colors = ButtonDefaults.buttonColors(containerColor = SteelBlue, disabledContainerColor = SteelBlue.copy(alpha = 0.4f)),
                                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                                enabled = email.isNotBlank() && password.isNotBlank() &&
-                                        (!isSignUp || username.isNotBlank())
-                            ) {
-                                Text(
-                                    text = if (isSignUp) "Create Account" else "Sign In",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 16.sp
-                                )
-                            }
+                                enabled = email.isNotBlank() && password.isNotBlank() && (!isSignUp || username.isNotBlank())
+                            ) { Text(if (isSignUp) "Create Account" else "Sign In", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) }
                         }
                     }
                 }
