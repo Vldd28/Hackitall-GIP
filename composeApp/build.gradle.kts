@@ -18,6 +18,21 @@ val env = loadEnv()
 val supabaseUrl: String = env["SUPABASE_URL"] ?: ""
 val supabaseAnonKey: String = env["SUPABASE_ANON_KEY"] ?: ""
 
+// ── Read local.properties ─────────────────────────────────────────────────────
+fun loadLocalProperties(): Map<String, String> {
+    val file = rootProject.file("local.properties")
+    if (!file.exists()) return emptyMap()
+    return file.readLines()
+        .filter { it.isNotBlank() && !it.startsWith("#") && "=" in it }
+        .associate { line ->
+            val idx = line.indexOf('=')
+            line.substring(0, idx).trim() to line.substring(idx + 1).trim()
+        }
+}
+
+val localProps = loadLocalProperties()
+val mapsApiKey: String = localProps["MAPS_API_KEY"] ?: ""
+
 // ── Generate SupabaseConfig.kt from .env values ───────────────────────────────
 val generatedSrcDir = layout.buildDirectory.dir("generated/kotlin/commonMain")
 
@@ -71,6 +86,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.maps.compose)
         }
         jsMain.dependencies {
             implementation(libs.ktor.client.js)
@@ -132,6 +148,7 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
     packaging {
         resources {
