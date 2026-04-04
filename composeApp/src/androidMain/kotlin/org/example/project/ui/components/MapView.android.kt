@@ -10,7 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
@@ -124,6 +127,7 @@ private fun createPlaceBitmap(type: PlaceType): Bitmap {
 @Composable
 actual fun MapView(
     events: List<Event>,
+    userId: String,
     onEventClick: (Event) -> Unit,
     onPlaceClick: (PlaceResult) -> Unit,
     modifier: Modifier
@@ -147,6 +151,8 @@ actual fun MapView(
     )
 
     val places by placesViewModel.places.collectAsState()
+    var selectedPlace by remember { mutableStateOf<PlaceResult?>(null) }
+    var selectedEvent by remember { mutableStateOf<Event?>(null) }
 
     // Raw bitmaps — no Maps SDK dependency, safe to create here
     val placeBitmaps = remember {
@@ -206,7 +212,7 @@ actual fun MapView(
                 state = MarkerState(LatLng(event.lat, event.lng)),
                 title = event.title,
                 snippet = event.locationName,
-                onClick = { onEventClick(event); false }
+                onClick = { selectedEvent = event; false }
             )
         }
 
@@ -221,9 +227,30 @@ actual fun MapView(
                     title = place.name,
                     snippet = place.address,
                     icon = icon,
-                    onClick = { onPlaceClick(place); false }
+                    onClick = { selectedPlace = place; false }
                 )
             }
         }
+    }
+
+    // Bottom sheet — locație
+    selectedPlace?.let { place ->
+        PlaceBottomSheet(
+            place = place,
+            allEvents = events,
+            userId = userId,
+            apiKey = apiKey,
+            onDismiss = { selectedPlace = null }
+        )
+    }
+
+    // Bottom sheet — eveniment
+    selectedEvent?.let { event ->
+        EventBottomSheet(
+            tappedEvent = event,
+            allEvents = events,
+            userId = userId,
+            onDismiss = { selectedEvent = null }
+        )
     }
 }

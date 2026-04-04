@@ -8,6 +8,7 @@ import org.example.project.data.model.PlaceResult
 @Composable
 expect fun MapView(
     events: List<Event>,
+    userId: String,
     onEventClick: (Event) -> Unit,
     onPlaceClick: (PlaceResult) -> Unit,
     modifier: Modifier = Modifier

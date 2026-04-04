@@ -16,6 +16,7 @@ private const val DEFAULT_ZOOM = 12
 @Composable
 actual fun MapView(
     events: List<Event>,
+    userId: String,
     onEventClick: (Event) -> Unit,
     onPlaceClick: (PlaceResult) -> Unit,
     modifier: Modifier
