@@ -9,6 +9,9 @@ import io.ktor.client.statement.bodyAsText
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.double
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -38,7 +41,7 @@ class PlacesRepository(private val apiKey: String) {
             }
           },
           "includedTypes": [$typeList],
-          "maxResultCount": 50
+          "maxResultCount": 20
         }
         """.trimIndent()
 
@@ -48,12 +51,15 @@ class PlacesRepository(private val apiKey: String) {
                     append("Content-Type", "application/json")
                     append("X-Goog-Api-Key", apiKey)
                     append("X-Goog-FieldMask",
-                        "places.id,places.displayName,places.location,places.formattedAddress,places.types")
+                        "places.id,places.displayName,places.location,places.formattedAddress,places.types,places.rating,places.userRatingCount")
                 }
                 setBody(body)
             }
-            parsePlaces(response.bodyAsText(), types)
+            val text = response.bodyAsText()
+            android.util.Log.d("PlacesRepo", "Status: ${response.status}, Body: $text")
+            parsePlaces(text, types)
         } catch (e: Exception) {
+            android.util.Log.e("PlacesRepo", "Request failed: ${e.message}", e)
             emptyList()
         }
     }
@@ -71,13 +77,18 @@ class PlacesRepository(private val apiKey: String) {
                 val lat = loc["latitude"]?.jsonPrimitive?.double ?: return@mapNotNull null
                 val lng = loc["longitude"]?.jsonPrimitive?.double ?: return@mapNotNull null
                 val address = obj["formattedAddress"]?.jsonPrimitive?.content ?: ""
+                val rating = obj["rating"]?.jsonPrimitive?.doubleOrNull
+                val totalRatings = obj["userRatingCount"]?.jsonPrimitive?.intOrNull
 
-                // Match the returned types to our PlaceType enum (first match wins)
                 val apiTypes = obj["types"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList()
                 val placeType = requestedTypes.firstOrNull { it.googleType in apiTypes }
                     ?: return@mapNotNull null
 
-                PlaceResult(id = id, name = name, lat = lat, lng = lng, type = placeType, address = address)
+                PlaceResult(
+                    id = id, name = name, lat = lat, lng = lng,
+                    type = placeType, address = address,
+                    rating = rating, totalRatings = totalRatings
+                )
             } catch (e: Exception) {
                 null
             }

@@ -13,5 +13,7 @@ data class PlaceResult(
     val lat: Double,
     val lng: Double,
     val type: PlaceType,
-    val address: String = ""
+    val address: String = "",
+    val rating: Double? = null,
+    val totalRatings: Int? = null
 )
