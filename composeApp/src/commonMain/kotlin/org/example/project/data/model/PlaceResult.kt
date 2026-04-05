@@ -1,10 +1,10 @@
 package org.example.project.data.model
 
-enum class PlaceType(val label: String, val googleType: String) {
-    MUSEUM("Museums", "museum"),
-    CAFE("Cafés", "cafe"),
-    CLUB("Clubs", "night_club"),
-    RESTAURANT("Restaurants", "restaurant")
+enum class PlaceType(val label: String, val googleType: String, val emoji: String) {
+    MUSEUM("Museums", "museum", "🏛"),
+    CAFE("Cafés", "cafe", "☕"),
+    CLUB("Clubs", "night_club", "🎵"),
+    RESTAURANT("Restaurants", "restaurant", "🍴")
 }
 
 data class PlaceResult(

@@ -1,64 +1,62 @@
 package org.example.project.ui.components
 
+// ── Map lifecycle ─────────────────────────────────────────────────────────────
+
 @JsFun("""(lat, lng, zoom) => {
-    window._wandrMapVisible = true;
+    var NAV_H = 110;
 
-    // Find Skiko's canvas
-    var canvas = document.querySelector('canvas');
-    if (canvas) {
-        var r = canvas.getBoundingClientRect();
-        console.log('[Wandr] canvas rect:', JSON.stringify(r));
-        console.log('[Wandr] canvas attr size:', canvas.width, 'x', canvas.height);
-        console.log('[Wandr] canvas offset size:', canvas.offsetWidth, 'x', canvas.offsetHeight);
-        console.log('[Wandr] canvas transform:', window.getComputedStyle(canvas).transform);
-    }
-
-    // Create or reuse map overlay div
+    // ── 1. Map overlay div ───────────────────────────────────────────────────
     var el = document.getElementById('wandr-map');
     if (!el) {
         el = document.createElement('div');
         el.id = 'wandr-map';
+        document.documentElement.appendChild(el);
     }
+    el.style.cssText = [
+        'position:fixed','top:0','left:0',
+        'width:100vw','height:100vh',
+        'z-index:9000',          /* always visible; canvas clips above it */
+        'display:block'
+    ].join(';');
 
-    // Insert map div BEFORE the canvas inside my-app so they share stacking context
-    var myApp = document.querySelector('.my-app') || document.querySelector('[class*="my-app"]') || document.body;
-    if (canvas && canvas.parentNode) {
-        canvas.parentNode.insertBefore(el, canvas);
-    } else {
-        myApp.appendChild(el);
-    }
-
-    el.style.position = 'absolute';
-    el.style.top = '0px';
-    el.style.left = '0px';
-    el.style.width = window.innerWidth + 'px';
-    el.style.height = window.innerHeight + 'px';
-    el.style.zIndex = '0';
-    el.style.display = 'block';
-
-    // Clip the canvas — use its actual CSS height for the math
+    // ── 2. Compose canvas — clipped to nav-bar strip only ────────────────────
+    var canvas = document.querySelector('canvas');
     if (canvas) {
-        var navHeight = 100; // px to reveal at bottom for nav bar
-        var cssH = canvas.offsetHeight || window.innerHeight;
-        var clipTop = cssH - navHeight;
-        console.log('[Wandr] clip-path inset top:', clipTop, 'of cssH:', cssH);
-        canvas.style.setProperty('clip-path', 'inset(' + clipTop + 'px 0 0 0)', 'important');
+        canvas.style.setProperty('will-change', 'auto', 'important');
         canvas.style.setProperty('z-index', '1', 'important');
         canvas.style.setProperty('position', 'relative', 'important');
+        // Show only the bottom NAV_H pixels (nav bar)
+        canvas.style.setProperty('clip-path',
+            'inset(' + (window.innerHeight - NAV_H) + 'px 0 0 0)', 'important');
     }
 
+    // ── 3. Init Leaflet ───────────────────────────────────────────────────────
     requestAnimationFrame(function() {
         requestAnimationFrame(function() {
             if (window._wandrMap) {
                 window._wandrMap.setView([lat, lng], zoom);
                 window._wandrMap.invalidateSize();
             } else {
-                window._wandrMap = L.map('wandr-map', { zoomControl: true }).setView([lat, lng], zoom);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap contributors',
-                    maxZoom: 19
-                }).addTo(window._wandrMap);
+                window._wandrMap = L.map('wandr-map', {
+                    zoomControl: true, attributionControl: true
+                }).setView([lat, lng], zoom);
+
+                // CartoDB Dark Matter base
+                L.tileLayer(
+                    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                    { attribution: '\u00a9 OpenStreetMap contributors \u00a9 CARTO',
+                      subdomains: 'abcd', maxZoom: 20 }
+                ).addTo(window._wandrMap);
+
                 window._wandrMap.invalidateSize();
+
+                // Apply blue tint to tiles only (not markers/labels)
+                // sepia gives colour base, hue-rotate shifts to blue family
+                setTimeout(function() {
+                    var tp = el.querySelector('.leaflet-tile-pane');
+                    if (tp) tp.style.filter =
+                        'sepia(1) hue-rotate(190deg) saturate(2.2) brightness(0.6)';
+                }, 600);
             }
         });
     });
@@ -66,30 +64,130 @@ package org.example.project.ui.components
 external fun jsShowMap(lat: Double, lng: Double, zoom: Int)
 
 @JsFun("""() => {
-    window._wandrMapVisible = false;
     var el = document.getElementById('wandr-map');
     if (el) el.style.display = 'none';
     var canvas = document.querySelector('canvas');
     if (canvas) {
-        canvas.style.removeProperty('clip-path');
+        canvas.style.removeProperty('will-change');
         canvas.style.removeProperty('z-index');
         canvas.style.removeProperty('position');
+        canvas.style.removeProperty('clip-path');
     }
 }""")
 external fun jsHideMap()
 
-@JsFun("""(lat, lng, title, location) => {
-    if (!window._wandrMap) return;
-    L.marker([lat, lng])
-        .addTo(window._wandrMap)
-        .bindPopup('<b>' + title + '</b><br>' + location);
+// ── Bottom-sheet visibility ───────────────────────────────────────────────────
+// When a sheet opens: remove the canvas clip so the full canvas is usable.
+// The map stays at z-index 9000 and shows through the transparent Compose areas
+// (Skiko uses clearRect so unpainted regions are truly transparent).
+// The sheet itself has an opaque background so it covers the map in its area.
+
+@JsFun("""() => {
+    var canvas = document.querySelector('canvas');
+    if (canvas) {
+        canvas.style.removeProperty('clip-path');          // full canvas
+        canvas.style.setProperty('z-index', '9999', 'important'); // above map
+    }
+    // Map stays at z-index 9000 — visible through transparent canvas areas
 }""")
-external fun jsAddMarker(lat: Double, lng: Double, title: String, location: String)
+external fun jsShowBottomSheet()
+
+@JsFun("""() => {
+    var NAV_H = 110;
+    var canvas = document.querySelector('canvas');
+    if (canvas) {
+        canvas.style.setProperty('clip-path',
+            'inset(' + (window.innerHeight - NAV_H) + 'px 0 0 0)', 'important');
+        canvas.style.setProperty('z-index', '1', 'important');
+    }
+    // Map stays unchanged at z-index 9000
+}""")
+external fun jsRestoreMapLayout()
+
+// ── Zoom / centre queries ─────────────────────────────────────────────────────
+
+@JsFun("() => window._wandrMap ? window._wandrMap.getZoom() : 12.0")
+external fun jsGetZoom(): Double
+
+@JsFun("() => window._wandrMap ? window._wandrMap.getCenter().lat : 44.4268")
+external fun jsGetCenterLat(): Double
+
+@JsFun("() => window._wandrMap ? window._wandrMap.getCenter().lng : 26.1025")
+external fun jsGetCenterLng(): Double
+
+// ── Event markers ─────────────────────────────────────────────────────────────
+
+@JsFun("""(lat, lng, title, location, eventId) => {
+    if (!window._wandrMap) return;
+    window._wandrEventMarkers = window._wandrEventMarkers || [];
+    var color = '#76ABAE';
+    var html = '<div style="width:36px;height:48px;display:flex;flex-direction:column;align-items:center">'
+             + '<div style="width:36px;height:36px;border-radius:50%;background:' + color
+             + ';display:flex;align-items:center;justify-content:center;font-size:18px'
+             + ';box-shadow:0 2px 6px rgba(0,0,0,0.7)">📍</div>'
+             + '<div style="width:0;height:0;border-left:9px solid transparent'
+             + ';border-right:9px solid transparent;border-top:12px solid ' + color + '"></div>'
+             + '</div>';
+    var icon = L.divIcon({ html: html, className: '',
+        iconSize: [36,48], iconAnchor: [18,48], popupAnchor: [0,-48] });
+    var marker = L.marker([lat, lng], { icon: icon })
+        .addTo(window._wandrMap)
+        .bindPopup('<b>' + title + '</b><br><span style="color:#aaa;font-size:12px">' + location + '</span>');
+    marker.on('click', function(e) {
+        L.DomEvent.stopPropagation(e);
+        window._wandrPendingEventId = eventId;
+    });
+    window._wandrEventMarkers.push(marker);
+}""")
+external fun jsAddEventMarker(lat: Double, lng: Double, title: String, location: String, eventId: String)
 
 @JsFun("""() => {
     if (!window._wandrMap) return;
-    window._wandrMap.eachLayer(function(layer) {
-        if (layer instanceof L.Marker) window._wandrMap.removeLayer(layer);
-    });
+    (window._wandrEventMarkers || []).forEach(function(m) { window._wandrMap.removeLayer(m); });
+    window._wandrEventMarkers = [];
 }""")
-external fun jsClearMarkers()
+external fun jsClearEventMarkers()
+
+// ── Place markers ─────────────────────────────────────────────────────────────
+
+@JsFun("""(lat, lng, emoji, color, name, address, placeId) => {
+    if (!window._wandrMap) return;
+    window._wandrPlaceMarkers = window._wandrPlaceMarkers || [];
+    var html = '<div style="width:36px;height:48px;display:flex;flex-direction:column;align-items:center">'
+             + '<div style="width:36px;height:36px;border-radius:50%;background:' + color
+             + ';display:flex;align-items:center;justify-content:center;font-size:16px'
+             + ';box-shadow:0 2px 6px rgba(0,0,0,0.7)">' + emoji + '</div>'
+             + '<div style="width:0;height:0;border-left:9px solid transparent'
+             + ';border-right:9px solid transparent;border-top:12px solid ' + color + '"></div>'
+             + '</div>';
+    var icon = L.divIcon({ html: html, className: '',
+        iconSize: [36,48], iconAnchor: [18,48], popupAnchor: [0,-48] });
+    var marker = L.marker([lat, lng], { icon: icon })
+        .addTo(window._wandrMap)
+        .bindPopup('<b>' + name + '</b><br><span style="color:#aaa;font-size:12px">' + address + '</span>');
+    marker.on('click', function(e) {
+        L.DomEvent.stopPropagation(e);
+        window._wandrPendingPlaceId = placeId;
+    });
+    window._wandrPlaceMarkers.push(marker);
+}""")
+external fun jsAddPlaceMarker(lat: Double, lng: Double, emoji: String, color: String, name: String, address: String, placeId: String)
+
+@JsFun("""() => {
+    if (!window._wandrMap) return;
+    (window._wandrPlaceMarkers || []).forEach(function(m) { window._wandrMap.removeLayer(m); });
+    window._wandrPlaceMarkers = [];
+}""")
+external fun jsClearPlaceMarkers()
+
+// ── Click polling ─────────────────────────────────────────────────────────────
+
+@JsFun("""() => {
+    var id = window._wandrPendingEventId; window._wandrPendingEventId = null; return id || null;
+}""")
+external fun jsPollEventClickId(): JsString?
+
+@JsFun("""() => {
+    var id = window._wandrPendingPlaceId; window._wandrPendingPlaceId = null; return id || null;
+}""")
+external fun jsPollPlaceClickId(): JsString?

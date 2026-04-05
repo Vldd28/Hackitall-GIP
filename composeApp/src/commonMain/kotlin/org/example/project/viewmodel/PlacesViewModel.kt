@@ -11,19 +11,20 @@ import org.example.project.data.model.PlaceResult
 import org.example.project.data.model.PlaceType
 import org.example.project.data.repository.PlacesRepository
 
-class PlacesViewModel(private val repository: PlacesRepository) : ViewModel() {
+class PlacesViewModel(
+    private val repository: PlacesRepository = PlacesRepository()
+) : ViewModel() {
 
     private val _places = MutableStateFlow<List<PlaceResult>>(emptyList())
     val places = _places.asStateFlow()
+
+    private val _searchResult = MutableStateFlow<PlaceResult?>(null)
+    val searchResult = _searchResult.asStateFlow()
 
     private val allTypes = setOf(PlaceType.RESTAURANT, PlaceType.CAFE, PlaceType.MUSEUM, PlaceType.CLUB)
 
     private var searchJob: Job? = null
 
-    private val _searchResult = MutableStateFlow<PlaceResult?>(null)
-    val searchResult = _searchResult.asStateFlow()
-
-    /** Call when camera stops moving. Debounces rapid calls by 400ms. */
     fun loadPlaces(lat: Double, lng: Double, radius: Double = 1500.0) {
         searchJob?.cancel()
         searchJob = viewModelScope.launch {

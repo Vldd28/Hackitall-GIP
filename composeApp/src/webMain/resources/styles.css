@@ -6,10 +6,11 @@ html, body {
     overflow: hidden;
 }
 
-/* Canvas-ul Compose trebuie sa fie sub div-ul hartii */
+/* Canvas-ul Compose — transparent unde Compose nu picteaza, harta se vede prin el */
 canvas {
     position: relative;
     z-index: 1;
+    background: transparent !important;
 }
 
 #wandr-map {

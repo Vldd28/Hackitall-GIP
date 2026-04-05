@@ -39,16 +39,24 @@ val generatedSrcDir = layout.buildDirectory.dir("generated/kotlin/commonMain")
 val generateSupabaseConfig by tasks.registering {
     outputs.dir(generatedSrcDir)
     doFirst {
-        val file = generatedSrcDir.get().asFile
-            .resolve("org/example/project/data/remote/SupabaseConfig.kt")
-        file.parentFile.mkdirs()
-        file.writeText(
+        val dir = generatedSrcDir.get().asFile.resolve("org/example/project/data/remote")
+        dir.mkdirs()
+        dir.resolve("SupabaseConfig.kt").writeText(
             """
             package org.example.project.data.remote
 
             internal object SupabaseConfig {
                 const val URL = "$supabaseUrl"
                 const val ANON_KEY = "$supabaseAnonKey"
+            }
+            """.trimIndent()
+        )
+        dir.resolve("PlacesConfig.kt").writeText(
+            """
+            package org.example.project.data.remote
+
+            internal object PlacesConfig {
+                const val API_KEY = "$mapsApiKey"
             }
             """.trimIndent()
         )

@@ -287,7 +287,7 @@ private fun SettingsIcon(tint: Color, modifier: Modifier = Modifier) {
         drawCircle(color = tint, radius = w * 0.17f, center = Offset(cx, cy), style = Stroke(width = w * 0.07f))
         // Teeth (6)
         for (i in 0..5) {
-            val angle = Math.toRadians((i * 60.0))
+            val angle = i * 60.0 * kotlin.math.PI / 180.0
             val x1 = cx + (w * 0.30f) * kotlin.math.cos(angle).toFloat()
             val y1 = cy + (h * 0.30f) * kotlin.math.sin(angle).toFloat()
             val x2 = cx + (w * 0.48f) * kotlin.math.cos(angle).toFloat()
@@ -305,7 +305,7 @@ private fun SunIcon(tint: Color, modifier: Modifier = Modifier) {
         val cx = w * 0.5f; val cy = h * 0.5f
         drawCircle(color = tint, radius = w * 0.22f, center = Offset(cx, cy))
         for (i in 0..7) {
-            val angle = Math.toRadians((i * 45.0))
+            val angle = i * 45.0 * kotlin.math.PI / 180.0
             val x1 = cx + (w * 0.30f) * kotlin.math.cos(angle).toFloat()
             val y1 = cy + (h * 0.30f) * kotlin.math.sin(angle).toFloat()
             val x2 = cx + (w * 0.46f) * kotlin.math.cos(angle).toFloat()
