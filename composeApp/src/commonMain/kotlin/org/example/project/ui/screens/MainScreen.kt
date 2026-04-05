@@ -1206,7 +1206,7 @@ private fun CalendarPage(
     onDaySelected: (day: Int) -> Unit,
     isDarkMode: Boolean = false
 ) {
-    val firstDayOfWeek = LocalDate(displayYear, displayMonth, 1).dayOfWeek.value
+    val firstDayOfWeek = LocalDate(displayYear, displayMonth, 1).dayOfWeek.ordinal + 1
     val totalDays = calDaysInMonth(displayYear, displayMonth)
 
     val eventDays = remember(events, displayYear, displayMonth) {
