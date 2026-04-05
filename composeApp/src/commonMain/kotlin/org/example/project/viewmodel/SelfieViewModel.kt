@@ -41,43 +41,63 @@ class SelfieViewModel(
 
     /**
      * Start polling for active events. Call this when user logs in.
-     * Checks every 60 seconds if user is in an active event.
+     * TESTING MODE: Checks every 10 seconds (fast detection for testing).
      * When an active event is found, starts a random selfie timer.
      */
     fun startMonitoring(userId: String) {
+        println("DEBUG SelfieVM: startMonitoring called for user $userId")
         pollingJob?.cancel()
         pollingJob = viewModelScope.launch {
             while (true) {
                 runCatching {
+                    println("DEBUG SelfieVM: Polling for active events...")
                     val activeEvents = repository.getActiveEventsForUser(userId)
+                    println("DEBUG SelfieVM: Found ${activeEvents.size} active events")
+                    activeEvents.forEach { event ->
+                        println("DEBUG SelfieVM: Active event - id=${event.id}, title=${event.title}, dateTime=${event.dateTime}")
+                    }
+                    
                     val newActive = activeEvents.firstOrNull()
 
                     if (newActive != null && _activeEvent.value?.id != newActive.id) {
                         // New active event detected — start selfie timer
+                        println("DEBUG SelfieVM: ✅ NEW ACTIVE EVENT DETECTED: ${newActive.title}")
                         _activeEvent.value = newActive
                         startSelfieTimer()
                     } else if (newActive == null) {
+                        println("DEBUG SelfieVM: No active events, clearing state")
                         _activeEvent.value = null
                         promptTimerJob?.cancel()
+                    } else {
+                        println("DEBUG SelfieVM: Still in same active event: ${newActive.title}")
                     }
+                }.onFailure { error ->
+                    println("ERROR SelfieVM: Failed to poll active events: ${error.message}")
+                    error.printStackTrace()
                 }
-                delay(60_000L) // Check every 60 seconds
+                delay(10_000L) // TESTING: Check every 10 seconds (was 60s)
             }
         }
     }
 
     /**
-     * Schedule a selfie prompt at a random time (2-10 minutes from now).
+     * Schedule a selfie prompt at a random time.
+     * TESTING MODE: 30-60 seconds (fast for testing).
+     * Production: 2-10 minutes for natural spontaneity.
      */
     private fun startSelfieTimer() {
         promptTimerJob?.cancel()
         promptTimerJob = viewModelScope.launch {
-            val delayMinutes = Random.nextInt(2, 11) // 2 to 10 minutes
-            delay(delayMinutes * 60_000L)
+            val delaySeconds = Random.nextInt(30, 61) // TESTING: 30-60 seconds (was 2-10 min)
+            println("DEBUG SelfieVM: ⏰ Selfie timer started - will prompt in $delaySeconds seconds")
+            delay(delaySeconds * 1_000L)
 
             // Only show if still in an active event
             if (_activeEvent.value != null) {
+                println("DEBUG SelfieVM: 🔔 SHOWING SELFIE PROMPT NOW!")
                 _showSelfiePrompt.value = true
+            } else {
+                println("DEBUG SelfieVM: Timer expired but no active event, skipping prompt")
             }
         }
     }

@@ -16,21 +16,38 @@ class EventPhotoRepository {
      * "Active" = event started within the last 3 hours (no explicit end time in schema).
      */
     suspend fun getActiveEventsForUser(userId: String): List<Event> {
+        println("DEBUG EventPhotoRepo: getActiveEventsForUser called for userId=$userId")
+        
         // Get all event IDs the user has joined
         val joined = supabase.from("event_participants").select {
             filter { eq("profile_id", userId) }
         }.decodeList<EventParticipant>()
+        
+        println("DEBUG EventPhotoRepo: User has joined ${joined.size} events")
+        joined.forEach { p ->
+            println("DEBUG EventPhotoRepo: Participant - eventId=${p.eventId}, status=${p.status}")
+        }
 
-        if (joined.isEmpty()) return emptyList()
+        if (joined.isEmpty()) {
+            println("DEBUG EventPhotoRepo: ❌ No joined events found!")
+            return emptyList()
+        }
 
         val joinedIds = joined.map { it.eventId }.toSet()
 
         // Get all public events and filter to active ones the user joined
         val allEvents = supabase.from("events").select().decodeList<Event>()
+        println("DEBUG EventPhotoRepo: Total events in database: ${allEvents.size}")
 
-        return allEvents.filter { event ->
-            event.id in joinedIds && isEventActive(event.dateTime)
+        val activeEvents = allEvents.filter { event ->
+            val isJoined = event.id in joinedIds
+            val isActive = isEventActive(event.dateTime)
+            println("DEBUG EventPhotoRepo: Event '${event.title}' - joined=$isJoined, active=$isActive, dateTime=${event.dateTime}")
+            isJoined && isActive
         }
+        
+        println("DEBUG EventPhotoRepo: ✅ Returning ${activeEvents.size} active events")
+        return activeEvents
     }
 
     /**
@@ -97,21 +114,37 @@ class EventPhotoRepository {
     companion object {
         /**
          * Check if an event is currently active based on its dateTime string.
-         * Active = started within the last 3 hours.
+         * TESTING MODE: Event is active as soon as it has started (no time limit).
+         * Production: should check if started within last 3 hours.
          */
         fun isEventActive(dateTimeStr: String): Boolean {
             return try {
                 val now = kotlinx.datetime.Clock.System.now()
+                println("DEBUG isEventActive: Current time = $now")
+                println("DEBUG isEventActive: Event dateTime string = '$dateTimeStr'")
+                
                 // Parse ISO datetime (handle various formats)
                 val cleaned = dateTimeStr
                     .replace(" ", "T")
                     .let { if (it.contains("+") || it.endsWith("Z")) it else "${it}Z" }
+                println("DEBUG isEventActive: Cleaned dateTime = '$cleaned'")
+                
                 val eventInstant = kotlinx.datetime.Instant.parse(cleaned)
+                println("DEBUG isEventActive: Parsed instant = $eventInstant")
 
                 val diffMs = (now - eventInstant).inWholeMilliseconds
-                // Event is active if it started (diffMs > 0) and within 3 hours (diffMs < 3h)
-                diffMs in 0..10_800_000L
+                println("DEBUG isEventActive: Time difference = $diffMs ms (${diffMs/1000} seconds)")
+                
+                val isActive = diffMs >= 0
+                println("DEBUG isEventActive: Result = $isActive (event has started: ${diffMs >= 0})")
+                
+                // TESTING: Event is active if it has started (diffMs > 0), no upper limit
+                isActive
+                
+                // PRODUCTION (restore later): diffMs in 0..10_800_000L (3 hours)
             } catch (e: Exception) {
+                println("ERROR isEventActive: Failed to parse dateTime: ${e.message}")
+                e.printStackTrace()
                 false
             }
         }
