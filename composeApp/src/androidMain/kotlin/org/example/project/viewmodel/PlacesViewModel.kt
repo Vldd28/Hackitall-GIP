@@ -20,6 +20,9 @@ class PlacesViewModel(private val repository: PlacesRepository) : ViewModel() {
 
     private var searchJob: Job? = null
 
+    private val _searchResult = MutableStateFlow<PlaceResult?>(null)
+    val searchResult = _searchResult.asStateFlow()
+
     /** Call when camera stops moving. Debounces rapid calls by 400ms. */
     fun loadPlaces(lat: Double, lng: Double, radius: Double = 1500.0) {
         searchJob?.cancel()
@@ -27,5 +30,17 @@ class PlacesViewModel(private val repository: PlacesRepository) : ViewModel() {
             delay(400)
             _places.value = repository.searchNearby(lat, lng, allTypes, radius)
         }
+    }
+
+    fun searchByText(query: String) {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            val results = repository.searchByText(query)
+            _searchResult.value = results.firstOrNull()
+        }
+    }
+
+    fun clearSearchResult() {
+        _searchResult.value = null
     }
 }

@@ -11,5 +11,7 @@ expect fun MapView(
     userId: String,
     onEventClick: (Event) -> Unit,
     onPlaceClick: (PlaceResult) -> Unit,
+    searchQuery: String,
+    onSearchConsumed: () -> Unit,
     modifier: Modifier = Modifier
 )
