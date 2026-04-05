@@ -40,8 +40,17 @@ import org.example.project.data.model.Event
 import org.example.project.data.model.Interest
 import org.example.project.data.model.Profile
 import org.example.project.ui.components.MapView
+import org.example.project.data.model.PlaceResult
 import org.example.project.viewmodel.EventViewModel
 import org.example.project.viewmodel.ProfileViewModel
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.ArrowForward
 
 // ── palette ───────────────────────────────────────────────────────────────────
 private val SteelBlue      = Color(0xFF80A1BA)
@@ -569,14 +578,14 @@ private fun ProfilePage(
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(start = 16.dp)
+                                modifier = Modifier.padding(start = 32.dp)
                             ) {
                                 Text("0", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = profileTextColor)
                                 Text("Friends", fontSize = 12.sp, color = profileTextColor.copy(alpha = 0.75f), fontWeight = FontWeight.SemiBold)
                             }
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(end = 16.dp)
+                                modifier = Modifier.padding(end = 32.dp)
                             ) {
                                 Text("0", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = profileTextColor)
                                 Text("Events", fontSize = 12.sp, color = profileTextColor.copy(alpha = 0.75f), fontWeight = FontWeight.SemiBold)
@@ -689,23 +698,216 @@ private fun ProfilePage(
 
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  CALENDAR PAGE (placeholder — replaces Explore)
+//  CALENDAR PAGE
 // ══════════════════════════════════════════════════════════════════════════════
 
+private fun calDaysInMonth(year: Int, month: Int): Int = when (month) {
+    2 -> if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) 29 else 28
+    4, 6, 9, 11 -> 30
+    else -> 31
+}
+
+private val calMonthNames = listOf(
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+)
+
+private fun eventsForDay(events: List<Event>, year: Int, month: Int, day: Int): List<Event> {
+    val prefix = "${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}"
+    return events.filter { it.dateTime.startsWith(prefix) }.sortedBy { it.dateTime }
+}
+
 @Composable
-private fun CalendarPage() {
+private fun CalendarPage(
+    events: List<Event>,
+    displayMonth: Int,
+    displayYear: Int,
+    todayYear: Int,
+    todayMonth: Int,
+    todayDay: Int,
+    onMonthChange: (month: Int, year: Int) -> Unit,
+    onDaySelected: (day: Int) -> Unit
+) {
+    val firstDayOfWeek = LocalDate(displayYear, displayMonth, 1).dayOfWeek.value
+    val totalDays = calDaysInMonth(displayYear, displayMonth)
+
+    val eventDays = remember(events, displayYear, displayMonth) {
+        val prefix = "${displayYear.toString().padStart(4, '0')}-${displayMonth.toString().padStart(2, '0')}"
+        val counts = mutableMapOf<Int, Int>()
+        events.forEach { e ->
+            if (e.dateTime.startsWith(prefix)) {
+                val dayStr = e.dateTime.substring(8, 10)
+                val d = dayStr.toIntOrNull() ?: return@forEach
+                counts[d] = (counts[d] ?: 0) + 1
+            }
+        }
+        counts
+    }
+
     Box(
         modifier = Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Teal.copy(alpha = 0.15f), Cream, Mint.copy(alpha = 0.1f)))
+            Brush.verticalGradient(listOf(Teal.copy(alpha = 0.08f), Cream, Mint.copy(alpha = 0.06f)))
         ),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CalendarIcon(tint = SteelBlue, modifier = Modifier.size(48.dp))
-            Spacer(Modifier.height(12.dp))
-            Text("Events Calendar", fontSize = 22.sp, color = SteelBlueDark, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(4.dp))
-            Text("Coming soon", fontSize = 14.sp, color = SteelBlue.copy(alpha = 0.6f))
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                // Month header with prev / next
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = {
+                        if (displayMonth == 1) onMonthChange(12, displayYear - 1)
+                        else onMonthChange(displayMonth - 1, displayYear)
+                    }, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Default.KeyboardArrowLeft, "Previous", tint = SteelBlueDark)
+                    }
+                    Text(
+                        "${calMonthNames[displayMonth - 1]} $displayYear",
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SteelBlueDark
+                    )
+                    IconButton(onClick = {
+                        if (displayMonth == 12) onMonthChange(1, displayYear + 1)
+                        else onMonthChange(displayMonth + 1, displayYear)
+                    }, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Default.KeyboardArrowRight, "Next", tint = SteelBlueDark)
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Day-of-week labels
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su").forEach { d ->
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            Text(d, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SteelBlue)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                // Day grid
+                val startOffset = firstDayOfWeek - 1
+                val totalCells = startOffset + totalDays
+                val rows = (totalCells + 6) / 7
+
+                for (row in 0 until rows) {
+                    Row(modifier = Modifier.fillMaxWidth().height(42.dp)) {
+                        for (col in 0..6) {
+                            val cellIndex = row * 7 + col
+                            val day = cellIndex - startOffset + 1
+
+                            if (day < 1 || day > totalDays) {
+                                Box(modifier = Modifier.weight(1f))
+                            } else {
+                                val hasEvents = eventDays.containsKey(day)
+                                val isToday = displayYear == todayYear &&
+                                        displayMonth == todayMonth && day == todayDay
+
+                                Box(
+                                    modifier = Modifier.weight(1f).padding(2.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .then(
+                                            when {
+                                                hasEvents -> Modifier.background(
+                                                    Teal.copy(alpha = 0.3f))
+                                                isToday -> Modifier.border(
+                                                    1.5.dp, Teal, RoundedCornerShape(10.dp))
+                                                else -> Modifier
+                                            }
+                                        )
+                                        .clickable(enabled = hasEvents) { onDaySelected(day) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "$day",
+                                        fontSize = 14.sp,
+                                        fontWeight = if (hasEvents || isToday)
+                                            FontWeight.Bold else FontWeight.Normal,
+                                        color = when {
+                                            hasEvents -> SteelBlueDark
+                                            isToday -> TealDark
+                                            else -> TextDark.copy(alpha = 0.7f)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MinimizedCalendar(
+    selectedDay: Int,
+    month: Int,
+    year: Int,
+    dayEvents: List<Event>,
+    currentIndex: Int,
+    onNext: () -> Unit,
+    onExpand: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val currentEvent = dayEvents.getOrNull(currentIndex)
+    val monthShort = calMonthNames[month - 1].take(3)
+
+    Card(
+        modifier = modifier.fillMaxWidth().clickable { onExpand() },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(10.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.97f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.KeyboardArrowUp, "Expand",
+                tint = SteelBlue, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text("$monthShort $selectedDay, $year",
+                    fontWeight = FontWeight.Bold, fontSize = 14.sp, color = SteelBlueDark)
+                Text("${dayEvents.size} event${if (dayEvents.size != 1) "s" else ""}",
+                    fontSize = 11.sp, color = SteelBlue)
+            }
+
+            currentEvent?.let { event ->
+                Text("${currentIndex + 1}/${dayEvents.size}",
+                    fontSize = 11.sp, color = SteelBlue, fontWeight = FontWeight.SemiBold)
+                Spacer(Modifier.width(6.dp))
+                Text(event.title, fontSize = 13.sp, color = TealDark,
+                    fontWeight = FontWeight.SemiBold, maxLines = 1,
+                    modifier = Modifier.widthIn(max = 100.dp))
+            }
+
+            if (dayEvents.size > 1) {
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = onNext,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text("Next", fontSize = 12.sp, color = Color.White,
+                        fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(2.dp))
+                    Icon(Icons.Default.ArrowForward, null,
+                        tint = Color.White, modifier = Modifier.size(14.dp))
+                }
+            }
         }
     }
 }
@@ -719,9 +921,12 @@ private fun MapPage(
     events: List<Event>,
     userId: String,
     onEventClick: (Event) -> Unit,
-    onPlaceClick: (org.example.project.data.model.PlaceResult) -> Unit,
+    onPlaceClick: (PlaceResult) -> Unit,
     searchQuery: String,
-    onSearchConsumed: () -> Unit
+    onSearchConsumed: () -> Unit,
+    centerLat: Double? = null,
+    centerLng: Double? = null,
+    onCenterConsumed: () -> Unit = {}
 ) {
     MapView(
         events = events,
@@ -730,6 +935,9 @@ private fun MapPage(
         onPlaceClick = onPlaceClick,
         searchQuery = searchQuery,
         onSearchConsumed = onSearchConsumed,
+        centerLat = centerLat,
+        centerLng = centerLng,
+        onCenterConsumed = onCenterConsumed,
         modifier = Modifier.fillMaxSize()
     )
 }
@@ -762,12 +970,44 @@ fun MainScreen(
     var selectedTab by remember { mutableStateOf(1) }
     var mapSearchQuery by remember { mutableStateOf("") }
 
+    // Calendar state
+    val now = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()) }
+    var displayMonth by remember { mutableStateOf(now.monthNumber) }
+    var displayYear by remember { mutableStateOf(now.year) }
+    var calendarMinimized by remember { mutableStateOf(false) }
+    var calendarSelectedDay by remember { mutableStateOf(0) }
+    var calendarDayEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
+    var calendarEventIndex by remember { mutableStateOf(0) }
+    var mapCenterLat by remember { mutableStateOf<Double?>(null) }
+    var mapCenterLng by remember { mutableStateOf<Double?>(null) }
+
+    val showMap = selectedTab == 1 || (selectedTab == 0 && calendarMinimized)
+
     Box(modifier = modifier.fillMaxSize()) {
-        when (selectedTab) {
-            0 -> CalendarPage()
-            1 -> MapPage(events = events, userId = userId, onEventClick = {}, onPlaceClick = {},
-                searchQuery = mapSearchQuery, onSearchConsumed = { mapSearchQuery = "" })
-            2 -> ProfilePage(
+        when {
+            selectedTab == 0 && !calendarMinimized -> CalendarPage(
+                events = events, displayMonth = displayMonth, displayYear = displayYear,
+                todayYear = now.year, todayMonth = now.monthNumber, todayDay = now.dayOfMonth,
+                onMonthChange = { m, y -> displayMonth = m; displayYear = y },
+                onDaySelected = { day ->
+                    val dayEvts = eventsForDay(events, displayYear, displayMonth, day)
+                    if (dayEvts.isNotEmpty()) {
+                        calendarSelectedDay = day
+                        calendarDayEvents = dayEvts
+                        calendarEventIndex = 0
+                        calendarMinimized = true
+                        mapCenterLat = dayEvts[0].lat
+                        mapCenterLng = dayEvts[0].lng
+                    }
+                }
+            )
+            showMap -> MapPage(
+                events = events, userId = userId, onEventClick = {}, onPlaceClick = {},
+                searchQuery = mapSearchQuery, onSearchConsumed = { mapSearchQuery = "" },
+                centerLat = mapCenterLat, centerLng = mapCenterLng,
+                onCenterConsumed = { mapCenterLat = null; mapCenterLng = null }
+            )
+            selectedTab == 2 -> ProfilePage(
                 profile = profile, isLoading = isLoading, userInterests = userInterests,
                 allInterests = allInterests,
                 onAddHobbies = { ids -> profileViewModel.setUserInterests(userId, ids) },
@@ -776,8 +1016,24 @@ fun MainScreen(
             )
         }
 
-        // Top buttons (map only)
-        if (selectedTab == 1) {
+        // Minimized calendar overlay
+        if (selectedTab == 0 && calendarMinimized) {
+            MinimizedCalendar(
+                selectedDay = calendarSelectedDay, month = displayMonth, year = displayYear,
+                dayEvents = calendarDayEvents, currentIndex = calendarEventIndex,
+                onNext = {
+                    calendarEventIndex = (calendarEventIndex + 1) % calendarDayEvents.size
+                    val event = calendarDayEvents[calendarEventIndex]
+                    mapCenterLat = event.lat; mapCenterLng = event.lng
+                },
+                onExpand = { calendarMinimized = false },
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .padding(bottom = 96.dp, start = 20.dp, end = 20.dp)
+            )
+        }
+
+        // Top buttons (map visible)
+        if (showMap) {
             var showSearchBar by remember { mutableStateOf(false) }
             var searchText by remember { mutableStateOf("") }
 
@@ -836,7 +1092,7 @@ fun MainScreen(
 
         // ── Bottom nav bar ───────────────────────────────────────────────
         Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .padding(horizontal = 20.dp).padding(bottom = 18.dp)) {
+            .padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .shadow(12.dp, RoundedCornerShape(28.dp))

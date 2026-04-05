@@ -72,7 +72,7 @@ private fun placeDistanceMeters(lat1: Double, lng1: Double, lat2: Double, lng2: 
 }
 
 private fun eventsAtPlace(place: PlaceResult, allEvents: List<Event>): List<Event> =
-    allEvents.filter { placeDistanceMeters(it.lat, it.lng, place.lat, place.lng) <= 200.0 }
+    allEvents.filter { it.locationName == place.name }
 
 @Composable
 private fun StarRow(rating: Double) {

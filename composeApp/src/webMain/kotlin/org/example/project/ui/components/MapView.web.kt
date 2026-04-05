@@ -55,6 +55,9 @@ actual fun MapView(
     onPlaceClick: (PlaceResult) -> Unit,
     searchQuery: String,
     onSearchConsumed: () -> Unit,
+    centerLat: Double?,
+    centerLng: Double?,
+    onCenterConsumed: () -> Unit,
     modifier: Modifier
 ) {
     val firstEvent = events.firstOrNull()
@@ -86,22 +89,33 @@ actual fun MapView(
         }
     }
 
-    // ── Event markers ─────────────────────────────────────────────────────────
-    LaunchedEffect(events) {
+    // ── Center on target coordinates ───────────────────────────────────────
+    LaunchedEffect(centerLat, centerLng) {
+        if (centerLat != null && centerLng != null) {
+            jsPanTo(centerLat, centerLng, 16)
+            onCenterConsumed()
+        }
+    }
+
+    // ── Event markers (only for events not shown via a loaded place) ─────────
+    LaunchedEffect(events, places) {
         jsClearEventMarkers()
-        events.forEach { event ->
+        val placeNames = places.map { it.name }.toSet()
+        events.filter { it.locationName !in placeNames }.forEach { event ->
             jsAddEventMarker(event.lat, event.lng, event.title, event.locationName, event.id)
         }
     }
 
-    // ── Place markers ─────────────────────────────────────────────────────────
-    LaunchedEffect(places) {
+    // ── Place markers (with event count badges) ──────────────────────────────
+    LaunchedEffect(places, events) {
         jsClearPlaceMarkers()
         places.forEach { place ->
+            val eventCount = events.count { it.locationName == place.name }
             jsAddPlaceMarker(
                 place.lat, place.lng,
                 place.type.emoji, place.type.pinColor(),
-                place.name, place.address, place.id
+                place.name, place.address, place.id,
+                eventCount
             )
         }
     }

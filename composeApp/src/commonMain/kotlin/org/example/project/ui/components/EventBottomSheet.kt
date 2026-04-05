@@ -70,7 +70,7 @@ fun EventBottomSheet(
     val now = remember { nowIso() }
 
     val locationEvents = remember(tappedEvent, allEvents) {
-        allEvents.filter { eventDistMeters(it.lat, it.lng, tappedEvent.lat, tappedEvent.lng) <= 100.0 }
+        allEvents.filter { it.locationName == tappedEvent.locationName }
     }
     val upcomingEvents = remember(locationEvents) {
         locationEvents.filter { it.dateTime >= now }.sortedBy { it.dateTime }

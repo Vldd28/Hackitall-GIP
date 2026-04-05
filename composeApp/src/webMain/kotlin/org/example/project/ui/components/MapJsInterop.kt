@@ -56,6 +56,12 @@ package org.example.project.ui.components
                     var tp = el.querySelector('.leaflet-tile-pane');
                     if (tp) tp.style.filter =
                         'sepia(1) hue-rotate(190deg) saturate(2.2) brightness(0.6)';
+                    var topLeft = el.querySelector('.leaflet-top.leaflet-left');
+                    if (topLeft) {
+                        topLeft.style.left = '50%';
+                        topLeft.style.transform = 'translateX(-50%)';
+                        topLeft.style.right = 'auto';
+                    }
                 }, 600);
             }
         });
@@ -150,15 +156,31 @@ external fun jsClearEventMarkers()
 
 // ── Place markers ─────────────────────────────────────────────────────────────
 
-@JsFun("""(lat, lng, emoji, color, name, address, placeId) => {
+@JsFun("""(lat, lng, emoji, color, name, address, placeId, eventCount) => {
     if (!window._wandrMap) return;
     window._wandrPlaceMarkers = window._wandrPlaceMarkers || [];
-    var html = '<div style="width:36px;height:48px;display:flex;flex-direction:column;align-items:center">'
+    var badge = '';
+    if (eventCount === 1) {
+        badge = '<div style="position:absolute;top:-6px;right:-8px;width:22px;height:22px;border-radius:50%;'
+              + 'background:#3D7A7D;box-shadow:0 2px 5px rgba(0,0,0,.5);border:2px solid #1a1a1a;'
+              + 'display:flex;align-items:center;justify-content:center">'
+              + '<span style="font-size:12px">📌</span></div>';
+    } else if (eventCount > 1) {
+        badge = '<div style="position:absolute;top:-6px;right:-14px;min-width:28px;height:22px;border-radius:11px;'
+              + 'background:#3D7A7D;box-shadow:0 2px 5px rgba(0,0,0,.5);border:2px solid #1a1a1a;'
+              + 'display:flex;align-items:center;justify-content:center;padding:0 3px">'
+              + '<span style="font-size:12px">📌</span>'
+              + '<span style="font-size:12px;color:#fff;font-weight:bold">+</span></div>';
+    }
+    var html = '<div style="position:relative;width:36px;height:48px;overflow:visible">'
+             + '<div style="display:flex;flex-direction:column;align-items:center">'
              + '<div style="width:36px;height:36px;border-radius:50%;background:' + color
              + ';display:flex;align-items:center;justify-content:center;font-size:16px'
              + ';box-shadow:0 2px 6px rgba(0,0,0,0.7)">' + emoji + '</div>'
              + '<div style="width:0;height:0;border-left:9px solid transparent'
              + ';border-right:9px solid transparent;border-top:12px solid ' + color + '"></div>'
+             + '</div>'
+             + badge
              + '</div>';
     var icon = L.divIcon({ html: html, className: '',
         iconSize: [36,48], iconAnchor: [18,48], popupAnchor: [0,-48] });
@@ -171,7 +193,7 @@ external fun jsClearEventMarkers()
     });
     window._wandrPlaceMarkers.push(marker);
 }""")
-external fun jsAddPlaceMarker(lat: Double, lng: Double, emoji: String, color: String, name: String, address: String, placeId: String)
+external fun jsAddPlaceMarker(lat: Double, lng: Double, emoji: String, color: String, name: String, address: String, placeId: String, eventCount: Int)
 
 @JsFun("""() => {
     if (!window._wandrMap) return;
@@ -179,6 +201,20 @@ external fun jsAddPlaceMarker(lat: Double, lng: Double, emoji: String, color: St
     window._wandrPlaceMarkers = [];
 }""")
 external fun jsClearPlaceMarkers()
+
+// ── Pan / fly to location ────────────────────────────────────────────────────
+
+@JsFun("""(lat, lng, zoom) => {
+    function tryFly() {
+        if (window._wandrMap) {
+            window._wandrMap.flyTo([lat, lng], zoom, {duration: 0.8});
+        } else {
+            setTimeout(tryFly, 100);
+        }
+    }
+    tryFly();
+}""")
+external fun jsPanTo(lat: Double, lng: Double, zoom: Int)
 
 // ── Click polling ─────────────────────────────────────────────────────────────
 

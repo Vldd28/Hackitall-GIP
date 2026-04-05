@@ -13,5 +13,8 @@ expect fun MapView(
     onPlaceClick: (PlaceResult) -> Unit,
     searchQuery: String,
     onSearchConsumed: () -> Unit,
+    centerLat: Double? = null,
+    centerLng: Double? = null,
+    onCenterConsumed: () -> Unit = {},
     modifier: Modifier = Modifier
 )

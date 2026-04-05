@@ -3,7 +3,15 @@ package org.example.project.ui.components
 import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.Path
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -11,7 +19,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
@@ -36,27 +49,61 @@ private const val MIN_ZOOM_FOR_PLACES = 14f
 
 private val WANDR_MAP_STYLE = MapStyleOptions("""
 [
-  { "elementType": "geometry", "stylers": [{ "color": "#31363F" }] },
-  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#31363F" }] },
-  { "elementType": "labels.text.fill", "stylers": [{ "color": "#EEEEEE" }] },
+  { "elementType": "geometry", "stylers": [{ "color": "#EAF5EC" }] },
+  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#EAF5EC" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#3A5A40" }] },
   { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#76ABAE" }] },
-  { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#EEEEEE" }] },
-  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#3E4550" }] },
-  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#212830" }] },
-  { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#76ABAE" }] },
-  { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#EEEEEE" }] },
+  { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#C8E6C9" }] },
+  { "featureType": "poi.park", "stylers": [{ "visibility": "on" }] },
+  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#B2DFDB" }] },
+  { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#3A5A40" }] },
+  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#FFFFFF" }] },
+  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#C8E6C9" }] },
+  { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#B4DEBD" }] },
+  { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#91C4A0" }] },
+  { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#3A5A40" }] },
   { "featureType": "transit", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "color": "#76ABAE" }] },
-  { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [{ "color": "#EEEEEE" }] }
+  { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "color": "#91C4A0" }] },
+  { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [{ "color": "#3A5A40" }] },
+  { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#EAF5EC" }] }
 ]
 """.trimIndent())
 
 private fun PlaceType.pinColor(): Int = when (this) {
-    PlaceType.MUSEUM     -> android.graphics.Color.parseColor("#9C6ED6")
-    PlaceType.CAFE       -> android.graphics.Color.parseColor("#C8793A")
-    PlaceType.CLUB       -> android.graphics.Color.parseColor("#D44F7A")
-    PlaceType.RESTAURANT -> android.graphics.Color.parseColor("#E8534A")
+    PlaceType.MUSEUM     -> android.graphics.Color.parseColor("#7B9E87")
+    PlaceType.CAFE       -> android.graphics.Color.parseColor("#91C4A0")
+    PlaceType.CLUB       -> android.graphics.Color.parseColor("#6AAF8A")
+    PlaceType.RESTAURANT -> android.graphics.Color.parseColor("#4E9A6F")
+}
+
+private fun createEventPinBitmap(count: Int): Bitmap {
+    val w = 72; val h = 92
+    val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.parseColor("#5A8A6A") }
+    val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.parseColor("#2D4A35")
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
+    val radius = w / 2f
+    canvas.drawCircle(w / 2f, radius, radius - 2f, bgPaint)
+    canvas.drawCircle(w / 2f, radius, radius - 2f, strokePaint)
+    val tip = Path().apply {
+        moveTo(w * 0.28f, h * 0.60f); lineTo(w * 0.72f, h * 0.60f)
+        lineTo(w * 0.5f, h.toFloat() - 2f); close()
+    }
+    canvas.drawPath(tip, bgPaint)
+    canvas.drawPath(tip, strokePaint)
+    val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE
+        textSize = if (count > 1) 16f else 20f
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+    }
+    val label = if (count > 1) "+$count" else "★"
+    canvas.drawText(label, w / 2f, radius + 7f, textPaint)
+    return bitmap
 }
 
 private fun createPlaceBitmap(type: PlaceType): Bitmap {
@@ -88,13 +135,15 @@ actual fun MapView(
     onPlaceClick: (PlaceResult) -> Unit,
     searchQuery: String,
     onSearchConsumed: () -> Unit,
+    centerLat: Double?,
+    centerLng: Double?,
+    onCenterConsumed: () -> Unit,
     modifier: Modifier
 ) {
     val placesViewModel = viewModel<PlacesViewModel>()
     val places by placesViewModel.places.collectAsState()
     val searchResult by placesViewModel.searchResult.collectAsState()
     var selectedPlace by remember { mutableStateOf<PlaceResult?>(null) }
-    var selectedEvent by remember { mutableStateOf<Event?>(null) }
 
     val placeBitmaps = remember { PlaceType.entries.associateWith { createPlaceBitmap(it) } }
     val placeIcons = remember { mutableMapOf<PlaceType, BitmapDescriptor>() }
@@ -128,6 +177,15 @@ actual fun MapView(
         )
     }
 
+    LaunchedEffect(centerLat, centerLng) {
+        if (centerLat != null && centerLng != null) {
+            cameraPositionState.animate(
+                CameraUpdateFactory.newLatLngZoom(LatLng(centerLat, centerLng), 16f)
+            )
+            onCenterConsumed()
+        }
+    }
+
     val currentZoom = cameraPositionState.position.zoom
     val showPlaces = currentZoom >= MIN_ZOOM_FOR_PLACES
 
@@ -149,18 +207,48 @@ actual fun MapView(
         }
     }
 
+    // Group events by location (rounded to ~100m grid)
+    val eventsByLocation = remember(events) {
+        events.groupBy { Pair((it.lat * 1000).toInt(), (it.lng * 1000).toInt()) }
+    }
+    val eventPinBitmaps = remember(eventsByLocation) {
+        eventsByLocation.mapValues { (_, evts) -> createEventPinBitmap(evts.size) }
+    }
+    val eventPinIcons = remember(eventPinBitmaps) {
+        eventPinBitmaps.mapValues { (_, bmp) -> BitmapDescriptorFactory.fromBitmap(bmp) }
+    }
+
+    Box(modifier = modifier.fillMaxSize()) {
     GoogleMap(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
         properties = MapProperties(mapStyleOptions = WANDR_MAP_STYLE),
-        uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false)
+        uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false, compassEnabled = false)
     ) {
-        events.forEach { event ->
+        // Event location pins — clicking opens the place/location popup
+        eventsByLocation.forEach { (key, evts) ->
+            val rep = evts.first()
+            val icon = eventPinIcons[key]
             Marker(
-                state = MarkerState(LatLng(event.lat, event.lng)),
-                title = event.title,
-                snippet = event.locationName,
-                onClick = { selectedEvent = event; false }
+                state = MarkerState(LatLng(rep.lat, rep.lng)),
+                title = rep.locationName,
+                snippet = if (evts.size > 1) "${evts.size} events" else rep.title,
+                icon = icon,
+                onClick = {
+                    // Find matching place or create a synthetic one to open PlaceBottomSheet
+                    val matchingPlace = places.firstOrNull {
+                        kotlin.math.abs(it.lat - rep.lat) < 0.001 && kotlin.math.abs(it.lng - rep.lng) < 0.001
+                    } ?: PlaceResult(
+                        id = rep.locationName,
+                        name = rep.locationName,
+                        lat = rep.lat,
+                        lng = rep.lng,
+                        type = PlaceType.RESTAURANT,
+                        address = rep.locationName
+                    )
+                    selectedPlace = matchingPlace
+                    false
+                }
             )
         }
 
@@ -187,10 +275,28 @@ actual fun MapView(
         )
     }
 
-    selectedEvent?.let { event ->
-        EventBottomSheet(
-            tappedEvent = event, allEvents = events, userId = userId,
-            onDismiss = { selectedEvent = null }
-        )
+    // Custom compass at top-center
+    val bearing = cameraPositionState.position.bearing
+    if (bearing != 0f) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 56.dp)
+                .shadow(4.dp, CircleShape)
+                .background(Color.White.copy(alpha = 0.92f), CircleShape)
+                .size(40.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Navigation,
+                contentDescription = "Compass",
+                tint = Color(0xFF5A8A6A),
+                modifier = Modifier
+                    .size(24.dp)
+                    .graphicsLayer { rotationZ = -bearing }
+            )
+        }
     }
+
+    } // end outer Box
 }
