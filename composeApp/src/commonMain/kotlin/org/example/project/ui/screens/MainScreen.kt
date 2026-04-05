@@ -1221,7 +1221,14 @@ fun MainScreen(
                     Icon(Icons.Default.Search, "Search place", tint = SteelBlueDark, modifier = Modifier.size(22.dp))
                 }
             }
-            IconButton(onClick = { }, modifier = Modifier.statusBarsPadding().padding(end = 16.dp, top = 12.dp)
+            IconButton(onClick = {
+                val random = events.randomOrNull()
+                if (random != null) {
+                    selectedTab = 1
+                    mapCenterLat = random.lat
+                    mapCenterLng = random.lng
+                }
+            }, modifier = Modifier.statusBarsPadding().padding(end = 16.dp, top = 12.dp)
                 .align(Alignment.TopEnd).shadow(6.dp, CircleShape).background(BarWhite, CircleShape).size(44.dp)) {
                 SuggestionIcon(tint = SteelBlueDark, modifier = Modifier.size(24.dp))
             }
@@ -1229,7 +1236,7 @@ fun MainScreen(
 
         // ── Bottom nav bar ───────────────────────────────────────────────
         Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            .padding(horizontal = 20.dp).padding(bottom = 48.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .shadow(12.dp, RoundedCornerShape(28.dp))
