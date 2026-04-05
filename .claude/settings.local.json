@@ -4,7 +4,8 @@
       "Bash(keytool -list -v -keystore \"/mnt/c/Users/balan/.android/debug.keystore\" -alias androiddebugkey -storepass android -keypass android)",
       "Bash(./gradlew :composeApp:assembleDebug)",
       "Bash(bash gradlew:*)",
-      "Bash(adb devices:*)"
+      "Bash(adb devices:*)",
+      "Bash(grep -E \"\\\\.kt$\")"
     ]
   }
 }

@@ -41,8 +41,12 @@ import org.example.project.data.model.Interest
 import org.example.project.data.model.Profile
 import org.example.project.ui.components.MapView
 import org.example.project.data.model.PlaceResult
+import org.example.project.data.model.EventPhoto
+import org.example.project.ui.components.CameraCapture
+import org.example.project.ui.components.SelfiePromptOverlay
 import org.example.project.viewmodel.EventViewModel
 import org.example.project.viewmodel.ProfileViewModel
+import org.example.project.viewmodel.SelfieViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -486,7 +490,9 @@ private fun ProfilePage(
     allInterests: List<Interest>,
     onAddHobbies: (List<Int>) -> Unit,
     onLoadAllInterests: () -> Unit,
-    onSignOut: () -> Unit
+    onSignOut: () -> Unit,
+    eventPhotos: List<EventPhoto> = emptyList(),
+    joinedEvents: List<Event> = emptyList()
 ) {
     var showHobbyPicker by remember { mutableStateOf(false) }
     var isDarkMode by remember { mutableStateOf(false) }
@@ -657,6 +663,120 @@ private fun ProfilePage(
                         }
 
                         Spacer(Modifier.height(24.dp))
+
+                        // ── Event Selfies / Photos ──────────────────────────────
+                        // Debug logging
+                        LaunchedEffect(eventPhotos, joinedEvents) {
+                            println("DEBUG ProfilePage: eventPhotos.size=${eventPhotos.size}, joinedEvents.size=${joinedEvents.size}")
+                            eventPhotos.forEach { photo ->
+                                println("DEBUG ProfilePage: Photo eventId=${photo.eventId}, path=${photo.storagePath}")
+                            }
+                            joinedEvents.forEach { event ->
+                                println("DEBUG ProfilePage: Joined event id=${event.id}, title=${event.title}")
+                            }
+                        }
+
+                        if (eventPhotos.isNotEmpty()) {
+                            val eventsById = joinedEvents.associateBy { it.id }
+                            // Group photos by event
+                            val photosByEvent = eventPhotos.groupBy { it.eventId }
+
+                            Text(
+                                "Event Memories",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SteelBlueDark,
+                                modifier = Modifier.padding(horizontal = 24.dp)
+                            )
+                            Spacer(Modifier.height(12.dp))
+
+                            photosByEvent.forEach { (eventId, photos) ->
+                                val event = eventsById[eventId]
+                                Card(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+                                    shape = RoundedCornerShape(18.dp),
+                                    elevation = CardDefaults.cardElevation(4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Cream.copy(alpha = 0.85f))
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        // Event title
+                                        Text(
+                                            event?.title ?: "Event",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SteelBlueDark
+                                        )
+                                        if (event != null) {
+                                            Text(
+                                                event.locationName,
+                                                fontSize = 11.sp,
+                                                color = Teal,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                        Spacer(Modifier.height(10.dp))
+
+                                        // Photo grid (horizontal scroll)
+                                        LazyRow(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            items(photos) { photo ->
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(110.dp)
+                                                        .clip(RoundedCornerShape(14.dp))
+                                                        .background(Cream.copy(alpha = 0.3f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    AsyncImage(
+                                                        model = photo.storagePath,
+                                                        contentDescription = photo.caption ?: "Event selfie",
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier.fillMaxSize()
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // Caption of first photo
+                                        photos.firstOrNull()?.caption?.let { caption ->
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(
+                                                caption,
+                                                fontSize = 11.sp,
+                                                color = SteelBlue,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(24.dp))
+                        } else {
+                            // Show message when no photos yet
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+                                shape = RoundedCornerShape(18.dp),
+                                elevation = CardDefaults.cardElevation(2.dp),
+                                colors = CardDefaults.cardColors(containerColor = Cream.copy(alpha = 0.6f))
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "No event memories yet.\nJoin events and take selfies to create memories!",
+                                        fontSize = 13.sp,
+                                        color = SteelBlue,
+                                        textAlign = TextAlign.Center,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(24.dp))
+                        }
                     }
                 }
 
@@ -952,12 +1072,16 @@ fun MainScreen(
     userId: String,
     profileViewModel: ProfileViewModel,
     eventViewModel: EventViewModel,
+    selfieViewModel: SelfieViewModel = androidx.lifecycle.viewmodel.compose.viewModel { SelfieViewModel() },
     modifier: Modifier = Modifier
 ) {
     LaunchedEffect(userId) {
         profileViewModel.loadProfile(userId)
         profileViewModel.loadAllInterests()
         eventViewModel.loadPublicEvents()
+        selfieViewModel.startMonitoring(userId)
+        selfieViewModel.loadUserPhotos(userId)
+        selfieViewModel.loadUserEvents(userId)
     }
 
     val profile by profileViewModel.profile.collectAsState()
@@ -965,6 +1089,14 @@ fun MainScreen(
     val userInterests by profileViewModel.userInterests.collectAsState()
     val allInterests by profileViewModel.allInterests.collectAsState()
     val events by eventViewModel.events.collectAsState()
+
+    // Selfie state
+    val showSelfiePrompt by selfieViewModel.showSelfiePrompt.collectAsState()
+    val selfieActiveEvent by selfieViewModel.activeEvent.collectAsState()
+    val isSelfieUploading by selfieViewModel.isUploading.collectAsState()
+    val userPhotos by selfieViewModel.userPhotos.collectAsState()
+    val userJoinedEvents by selfieViewModel.userEvents.collectAsState()
+    var showCamera by remember { mutableStateOf(false) }
 
     // 0 = calendar, 1 = map, 2 = profile
     var selectedTab by remember { mutableStateOf(1) }
@@ -1012,7 +1144,9 @@ fun MainScreen(
                 allInterests = allInterests,
                 onAddHobbies = { ids -> profileViewModel.setUserInterests(userId, ids) },
                 onLoadAllInterests = { profileViewModel.loadAllInterests() },
-                onSignOut = onSignOut
+                onSignOut = onSignOut,
+                eventPhotos = userPhotos,
+                joinedEvents = userJoinedEvents
             )
         }
 
@@ -1129,6 +1263,26 @@ fun MainScreen(
                 }
             }
         }
+
+        // ── Selfie prompt overlay ────────────────────────────────────────
+        if (showSelfiePrompt && selfieActiveEvent != null) {
+            SelfiePromptOverlay(
+                event = selfieActiveEvent!!,
+                isUploading = isSelfieUploading,
+                onTakeSelfie = { showCamera = true },
+                onDismiss = { selfieViewModel.dismissPrompt() }
+            )
+        }
+
+        // Camera capture (platform-specific)
+        CameraCapture(
+            showCamera = showCamera,
+            onPhotoCaptured = { bytes ->
+                showCamera = false
+                selfieViewModel.uploadSelfie(userId, bytes)
+            },
+            onDismiss = { showCamera = false }
+        )
     }
 }
 

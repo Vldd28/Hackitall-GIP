@@ -11,6 +11,7 @@ import org.example.project.ui.screens.MainScreen
 import org.example.project.viewmodel.AuthViewModel
 import org.example.project.viewmodel.EventViewModel
 import org.example.project.viewmodel.ProfileViewModel
+import org.example.project.viewmodel.SelfieViewModel
 
 @Composable
 fun App() {
@@ -18,6 +19,7 @@ fun App() {
         val authViewModel = viewModel { AuthViewModel() }
         val profileViewModel = viewModel { ProfileViewModel() }
         val eventViewModel = viewModel { EventViewModel() }
+        val selfieViewModel = viewModel { SelfieViewModel() }
         val uiState by authViewModel.uiState.collectAsState()
         val sessionStatus by authViewModel.sessionStatus.collectAsState()
 
@@ -26,7 +28,8 @@ fun App() {
                 userId = (sessionStatus as SessionStatus.Authenticated).session.user?.id ?: "unknown",
                 onSignOut = { authViewModel.signOut() },
                 profileViewModel = profileViewModel,
-                eventViewModel = eventViewModel
+                eventViewModel = eventViewModel,
+                selfieViewModel = selfieViewModel
             )
             else -> AuthScreen(
                 uiState = uiState,
