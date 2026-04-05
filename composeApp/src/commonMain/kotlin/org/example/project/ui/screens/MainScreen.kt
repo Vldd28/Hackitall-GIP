@@ -1046,7 +1046,8 @@ private fun MapPage(
     onSearchConsumed: () -> Unit,
     centerLat: Double? = null,
     centerLng: Double? = null,
-    onCenterConsumed: () -> Unit = {}
+    onCenterConsumed: () -> Unit = {},
+    onEventCreated: (Event) -> Unit = {}
 ) {
     MapView(
         events = events,
@@ -1058,6 +1059,7 @@ private fun MapPage(
         centerLat = centerLat,
         centerLng = centerLng,
         onCenterConsumed = onCenterConsumed,
+        onEventCreated = onEventCreated,
         modifier = Modifier.fillMaxSize()
     )
 }
@@ -1137,7 +1139,8 @@ fun MainScreen(
                 events = events, userId = userId, onEventClick = {}, onPlaceClick = {},
                 searchQuery = mapSearchQuery, onSearchConsumed = { mapSearchQuery = "" },
                 centerLat = mapCenterLat, centerLng = mapCenterLng,
-                onCenterConsumed = { mapCenterLat = null; mapCenterLng = null }
+                onCenterConsumed = { mapCenterLat = null; mapCenterLng = null },
+                onEventCreated = { event -> eventViewModel.addEvent(event) }
             )
             selectedTab == 2 -> ProfilePage(
                 profile = profile, isLoading = isLoading, userInterests = userInterests,

@@ -16,5 +16,6 @@ expect fun MapView(
     centerLat: Double? = null,
     centerLng: Double? = null,
     onCenterConsumed: () -> Unit = {},
+    onEventCreated: (Event) -> Unit = {},
     modifier: Modifier = Modifier
 )

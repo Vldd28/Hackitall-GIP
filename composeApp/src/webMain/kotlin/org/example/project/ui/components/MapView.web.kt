@@ -58,6 +58,7 @@ actual fun MapView(
     centerLat: Double?,
     centerLng: Double?,
     onCenterConsumed: () -> Unit,
+    onEventCreated: (Event) -> Unit,
     modifier: Modifier
 ) {
     val firstEvent = events.firstOrNull()
@@ -164,7 +165,8 @@ actual fun MapView(
     selectedPlace?.let { place ->
         PlaceBottomSheet(
             place = place, allEvents = events, userId = userId,
-            onDismiss = { selectedPlace = null }
+            onDismiss = { selectedPlace = null },
+            onEventCreated = onEventCreated
         )
     }
 

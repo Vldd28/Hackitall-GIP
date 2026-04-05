@@ -106,5 +106,9 @@ class EventViewModel(
         }
     }
 
+    fun addEvent(event: Event) {
+        _events.value = _events.value + event
+    }
+
     fun clearError() { _error.value = null }
 }

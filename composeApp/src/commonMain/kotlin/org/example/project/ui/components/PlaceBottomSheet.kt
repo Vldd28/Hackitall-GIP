@@ -150,7 +150,8 @@ fun PlaceBottomSheet(
     place: PlaceResult,
     allEvents: List<Event>,
     userId: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onEventCreated: (Event) -> Unit = {}
 ) {
     val apiKey = PlacesConfig.API_KEY
     val eventsHere = remember(place, allEvents) { eventsAtPlace(place, allEvents) }
@@ -268,7 +269,7 @@ fun PlaceBottomSheet(
     }
 
     if (showCreateForm) {
-        CreateEventDialog(place = place, userId = userId, onDismiss = { showCreateForm = false })
+        CreateEventDialog(place = place, userId = userId, onDismiss = { showCreateForm = false }, onEventCreated = onEventCreated)
     }
 }
 
@@ -360,7 +361,7 @@ private fun PlaceEventCard(event: Event, userId: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () -> Unit) {
+private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () -> Unit, onEventCreated: (Event) -> Unit = {}) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var maxParticipants by remember { mutableStateOf("10") }
@@ -453,7 +454,10 @@ private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () 
                         )
                         scope.launch {
                             runCatching { repo.createEvent(insert) }
-                                .onSuccess { showParticles = true }
+                                .onSuccess { event ->
+                                    onEventCreated(event)
+                                    showParticles = true
+                                }
                                 .onFailure { error = it.message ?: "Failed to create event." }
                             isLoading = false
                         }
