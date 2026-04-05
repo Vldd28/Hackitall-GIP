@@ -1,5 +1,7 @@
 package org.example.project.ui.components
 
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -37,13 +40,20 @@ import org.example.project.data.model.PlaceType
 import org.example.project.data.remote.PlacesConfig
 import org.example.project.data.repository.EventRepository
 import kotlin.math.*
+import kotlin.random.Random
 
-private val DarkBg    = Color(0xFF31363F)
-private val TealColor = Color(0xFF76ABAE)
-private val LightText = Color(0xFFEEEEEE)
-private val SubText   = Color(0xFFAAAAAA)
-private val CardBg    = Color(0xFF3A3F47)
-private val StarColor = Color(0xFFFFD700)
+// Light theme palette
+private val SheetBg     = Color(0xFFF5FBF6)
+private val SheetCard   = Color(0xFFE4F4E8)
+private val SheetChip   = Color(0xFFD2EDD8)
+private val SheetTeal   = Color(0xFF4A9E8E)
+private val SheetGreen  = Color(0xFF5BAD72)
+private val SheetText   = Color(0xFF2A4A3A)
+private val SheetSub    = Color(0xFF7A9A8A)
+private val SheetBorder = Color(0xFFB8DEC0)
+private val StarColor   = Color(0xFFFFD700)
+private val DarkBg      = Color(0xFF31363F)  // unused, kept for compat
+private val SubText     = Color(0xFFAAAAAA)  // unused, kept for compat
 
 private fun Int.pad2() = toString().padStart(2, '0')
 private fun Int.pad4() = toString().padStart(4, '0')
@@ -72,9 +82,58 @@ private fun StarRow(rating: Double) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         repeat(full)  { Icon(Icons.Default.Star, null, tint = StarColor, modifier = Modifier.size(16.dp)) }
         repeat(half)  { Icon(Icons.Default.Star, null, tint = StarColor.copy(alpha = 0.5f), modifier = Modifier.size(16.dp)) }
-        repeat(empty) { Icon(Icons.Default.Star, null, tint = SubText, modifier = Modifier.size(16.dp)) }
+        repeat(empty) { Icon(Icons.Default.Star, null, tint = SheetSub, modifier = Modifier.size(16.dp)) }
         Spacer(Modifier.width(4.dp))
-        Text(rating.toOneDecimal(), color = LightText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(rating.toOneDecimal(), color = SheetText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+// ── Particle explosion overlay ────────────────────────────────────────────────
+private data class Particle(
+    val x: Float, val y: Float,
+    val vx: Float, val vy: Float,
+    val color: Color,
+    val radius: Float
+)
+
+@Composable
+fun ParticleExplosion(onFinished: () -> Unit) {
+    val particleColors = listOf(
+        Color(0xFF5BAD72), Color(0xFF4A9E8E), Color(0xFFB4DEBD),
+        Color(0xFF80A1BA), Color(0xFFFFD700), Color(0xFFFF8C69),
+        Color(0xFF91C4C3), Color(0xFFD2EDD8)
+    )
+    val particles = remember {
+        List(60) {
+            val angle = Random.nextFloat() * 2f * PI.toFloat()
+            val speed = Random.nextFloat() * 18f + 6f
+            Particle(
+                x = 0.5f, y = 0.5f,
+                vx = kotlin.math.cos(angle) * speed,
+                vy = kotlin.math.sin(angle) * speed,
+                color = particleColors[it % particleColors.size],
+                radius = Random.nextFloat() * 8f + 4f
+            )
+        }
+    }
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, animationSpec = tween(900, easing = LinearEasing))
+        onFinished()
+    }
+    val p = progress.value
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width; val h = size.height
+        particles.forEach { particle ->
+            val alpha = (1f - p).coerceIn(0f, 1f)
+            val px = (particle.x + particle.vx * p / 100f) * w
+            val py = (particle.y + particle.vy * p / 100f + 0.5f * 9.8f * (p / 100f) * (p / 100f) * 10000f) * h
+            drawCircle(
+                color = particle.color.copy(alpha = alpha),
+                radius = particle.radius * (1f - p * 0.5f),
+                center = Offset(px, py)
+            )
+        }
     }
 }
 
@@ -92,15 +151,15 @@ fun PlaceBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = DarkBg,
-        contentColor = LightText,
+        containerColor = SheetBg,
+        contentColor = SheetText,
         dragHandle = {
             Box(
                 Modifier
                     .padding(top = 10.dp, bottom = 6.dp)
                     .size(width = 40.dp, height = 4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(SubText)
+                    .background(SheetBorder)
             )
         }
     ) {
@@ -136,7 +195,7 @@ fun PlaceBottomSheet(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(TealColor.copy(alpha = 0.2f))
+                            .background(SheetChip)
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
@@ -146,22 +205,22 @@ fun PlaceBottomSheet(
                                 PlaceType.CLUB       -> "🎵 Club"
                                 PlaceType.RESTAURANT -> "🍴 Restaurant"
                             },
-                            color = TealColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
+                            color = SheetTeal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
                         )
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text(place.name, color = LightText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(place.name, color = SheetText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(4.dp))
                     if (place.rating != null) {
                         StarRow(place.rating)
-                        place.totalRatings?.let { Text("$it reviews", color = SubText, fontSize = 12.sp) }
+                        place.totalRatings?.let { Text("$it reviews", color = SheetSub, fontSize = 12.sp) }
                         Spacer(Modifier.height(4.dp))
                     }
                     if (place.address.isNotBlank()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.LocationOn, null, tint = SubText, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.LocationOn, null, tint = SheetSub, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text(place.address, color = SubText, fontSize = 13.sp)
+                            Text(place.address, color = SheetSub, fontSize = 13.sp)
                         }
                     }
                 }
@@ -170,7 +229,7 @@ fun PlaceBottomSheet(
             item {
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                    color = CardBg
+                    color = SheetBorder
                 )
             }
 
@@ -180,19 +239,19 @@ fun PlaceBottomSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Events here", color = LightText, fontSize = 15.sp,
+                    Text("Events here", color = SheetText, fontSize = 15.sp,
                         fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     TextButton(onClick = { showCreateForm = true }) {
-                        Icon(Icons.Default.Add, null, tint = TealColor, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, null, tint = SheetGreen, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Create event", color = TealColor, fontSize = 13.sp)
+                        Text("Create event", color = SheetGreen, fontSize = 13.sp)
                     }
                 }
             }
 
             if (eventsHere.isEmpty()) {
                 item {
-                    Text("No events yet at this location.", color = SubText, fontSize = 13.sp,
+                    Text("No events yet at this location.", color = SheetSub, fontSize = 13.sp,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 }
             } else {
@@ -208,19 +267,45 @@ fun PlaceBottomSheet(
 
 @Composable
 private fun PlaceEventCard(event: Event) {
+    val parts = event.dateTime.split("T")
+    val datePart = parts.getOrNull(0) ?: event.dateTime
+    val timePart = parts.getOrNull(1)?.take(5) ?: ""
+    val maxSpots = event.maxParticipants
+    // Without loading participants, show total spots
+    val spotsText = "$maxSpots spots total"
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBg)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = SheetCard),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(event.title, color = LightText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            if (!event.description.isNullOrBlank()) {
-                Spacer(Modifier.height(2.dp))
-                Text(event.description, color = SubText, fontSize = 12.sp, maxLines = 2)
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(event.title, color = SheetText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.DateRange, null, tint = SheetTeal, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(datePart, color = SheetSub, fontSize = 12.sp)
+                }
+                if (timePart.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.AccessTime, null, tint = SheetTeal, modifier = Modifier.size(13.dp))
+                        Spacer(Modifier.width(3.dp))
+                        Text(timePart, color = SheetSub, fontSize = 12.sp)
+                    }
+                }
             }
-            Spacer(Modifier.height(4.dp))
-            Text(event.dateTime, color = TealColor, fontSize = 11.sp)
+            Spacer(Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(SheetChip)
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(spotsText, color = SheetTeal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
@@ -252,99 +337,107 @@ private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () 
     val repo = remember { EventRepository() }
     val scope = rememberCoroutineScope()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = DarkBg,
-        titleContentColor = LightText,
-        textContentColor = LightText,
-        title = { Text("New Event at ${place.name}", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(value = title, onValueChange = { title = it },
-                    label = { Text("Title") }, singleLine = true,
-                    modifier = Modifier.fillMaxWidth(), colors = wandrTextFieldColors())
-                OutlinedTextField(value = description, onValueChange = { description = it },
-                    label = { Text("Description (optional)") }, maxLines = 3,
-                    modifier = Modifier.fillMaxWidth(), colors = wandrTextFieldColors())
+    var showParticles by remember { mutableStateOf(false) }
 
-                OutlinedButton(
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, SubText),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = LightText)
-                ) {
-                    Icon(Icons.Default.DateRange, null, tint = TealColor, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(dateLabel, color = if (selectedDate != null) LightText else SubText, fontSize = 14.sp)
-                    Spacer(Modifier.weight(1f))
-                }
+    Box(modifier = Modifier.fillMaxSize()) {
+        AlertDialog(
+            onDismissRequest = { if (!showParticles) onDismiss() },
+            containerColor = SheetBg,
+            titleContentColor = SheetText,
+            textContentColor = SheetText,
+            title = { Text("New Event at ${place.name}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = SheetText) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(value = title, onValueChange = { title = it },
+                        label = { Text("Title") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth(), colors = lightTextFieldColors())
+                    OutlinedTextField(value = description, onValueChange = { description = it },
+                        label = { Text("Description (optional)") }, maxLines = 3,
+                        modifier = Modifier.fillMaxWidth(), colors = lightTextFieldColors())
 
-                OutlinedButton(
-                    onClick = { showTimePicker = true },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(4.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, SubText),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = LightText)
-                ) {
-                    Icon(Icons.Default.AccessTime, null, tint = TealColor, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(timeLabel, color = LightText, fontSize = 14.sp)
-                    Spacer(Modifier.weight(1f))
-                }
-
-                OutlinedTextField(value = maxParticipants, onValueChange = { maxParticipants = it },
-                    label = { Text("Max participants") }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(), colors = wandrTextFieldColors())
-                error?.let { Text(it, color = Color(0xFFFF6B6B), fontSize = 12.sp) }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (title.isBlank() || selectedDate == null) {
-                        error = "Title and date are required."
-                        return@Button
+                    OutlinedButton(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, SheetBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SheetText)
+                    ) {
+                        Icon(Icons.Default.DateRange, null, tint = SheetTeal, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(dateLabel, color = if (selectedDate != null) SheetText else SheetSub, fontSize = 14.sp)
+                        Spacer(Modifier.weight(1f))
                     }
-                    isLoading = true; error = null
-                    val insert = EventInsert(
-                        creatorId = userId, title = title.trim(),
-                        description = description.trim().ifBlank { null },
-                        locationName = place.name, lat = place.lat, lng = place.lng,
-                        dateTime = "${dateLabel}T${timeLabel}:00",
-                        maxParticipants = maxParticipants.toIntOrNull() ?: 10, isPublic = true
-                    )
-                    scope.launch {
-                        runCatching { repo.createEvent(insert) }
-                            .onSuccess { onDismiss() }
-                            .onFailure { error = it.message ?: "Failed to create event." }
-                        isLoading = false
+
+                    OutlinedButton(
+                        onClick = { showTimePicker = true },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, SheetBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SheetText)
+                    ) {
+                        Icon(Icons.Default.AccessTime, null, tint = SheetTeal, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(timeLabel, color = SheetText, fontSize = 14.sp)
+                        Spacer(Modifier.weight(1f))
                     }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = TealColor),
-                enabled = !isLoading
-            ) {
-                if (isLoading) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                else Text("Create", color = Color.White)
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = SubText) } }
-    )
+
+                    OutlinedTextField(value = maxParticipants, onValueChange = { maxParticipants = it },
+                        label = { Text("Max participants") }, singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(), colors = lightTextFieldColors())
+                    error?.let { Text(it, color = Color(0xFFD9534F), fontSize = 12.sp) }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (title.isBlank() || selectedDate == null) {
+                            error = "Title and date are required."
+                            return@Button
+                        }
+                        isLoading = true; error = null
+                        val insert = EventInsert(
+                            creatorId = userId, title = title.trim(),
+                            description = description.trim().ifBlank { null },
+                            locationName = place.name, lat = place.lat, lng = place.lng,
+                            dateTime = "${dateLabel}T${timeLabel}:00",
+                            maxParticipants = maxParticipants.toIntOrNull() ?: 10, isPublic = true
+                        )
+                        scope.launch {
+                            runCatching { repo.createEvent(insert) }
+                                .onSuccess { showParticles = true }
+                                .onFailure { error = it.message ?: "Failed to create event." }
+                            isLoading = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SheetGreen),
+                    enabled = !isLoading && !showParticles
+                ) {
+                    if (isLoading) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                    else Text("Create", color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+            },
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = SheetSub) } }
+        )
+
+        if (showParticles) {
+            ParticleExplosion(onFinished = { showParticles = false; onDismiss() })
+        }
+    }
 
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
-            confirmButton = { TextButton(onClick = { showDatePicker = false }) { Text("OK", color = TealColor) } },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel", color = SubText) } },
-            colors = DatePickerDefaults.colors(containerColor = DarkBg)
+            confirmButton = { TextButton(onClick = { showDatePicker = false }) { Text("OK", color = SheetGreen, fontWeight = FontWeight.SemiBold) } },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel", color = SheetSub) } },
+            colors = DatePickerDefaults.colors(containerColor = SheetBg)
         ) {
             DatePicker(state = datePickerState, colors = DatePickerDefaults.colors(
-                containerColor = DarkBg, titleContentColor = TealColor,
-                headlineContentColor = LightText, weekdayContentColor = SubText,
-                selectedDayContainerColor = TealColor, selectedDayContentColor = DarkBg,
-                todayContentColor = TealColor, todayDateBorderColor = TealColor,
-                dayContentColor = LightText
+                containerColor = SheetBg, titleContentColor = SheetTeal,
+                headlineContentColor = SheetText, weekdayContentColor = SheetSub,
+                selectedDayContainerColor = SheetGreen, selectedDayContentColor = Color.White,
+                todayContentColor = SheetGreen, todayDateBorderColor = SheetGreen,
+                dayContentColor = SheetText
             ))
         }
     }
@@ -352,28 +445,28 @@ private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () 
     if (showTimePicker) {
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            containerColor = DarkBg,
-            title = { Text("Select time", color = LightText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
+            containerColor = SheetBg,
+            title = { Text("Select time", color = SheetText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
             text = {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     TimePicker(state = timePickerState, colors = TimePickerDefaults.colors(
-                        clockDialColor = CardBg, clockDialSelectedContentColor = DarkBg,
-                        clockDialUnselectedContentColor = LightText, selectorColor = TealColor,
-                        containerColor = DarkBg, timeSelectorSelectedContainerColor = TealColor,
-                        timeSelectorUnselectedContainerColor = CardBg,
-                        timeSelectorSelectedContentColor = DarkBg, timeSelectorUnselectedContentColor = LightText
+                        clockDialColor = SheetCard, clockDialSelectedContentColor = Color.White,
+                        clockDialUnselectedContentColor = SheetText, selectorColor = SheetGreen,
+                        containerColor = SheetBg, timeSelectorSelectedContainerColor = SheetGreen,
+                        timeSelectorUnselectedContainerColor = SheetCard,
+                        timeSelectorSelectedContentColor = Color.White, timeSelectorUnselectedContentColor = SheetText
                     ))
                 }
             },
-            confirmButton = { TextButton(onClick = { showTimePicker = false }) { Text("OK", color = TealColor) } },
-            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancel", color = SubText) } }
+            confirmButton = { TextButton(onClick = { showTimePicker = false }) { Text("OK", color = SheetGreen, fontWeight = FontWeight.SemiBold) } },
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancel", color = SheetSub) } }
         )
     }
 }
 
 @Composable
-private fun wandrTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = TealColor, unfocusedBorderColor = SubText,
-    focusedLabelColor = TealColor, unfocusedLabelColor = SubText,
-    focusedTextColor = LightText, unfocusedTextColor = LightText, cursorColor = TealColor
+private fun lightTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = SheetGreen, unfocusedBorderColor = SheetBorder,
+    focusedLabelColor = SheetGreen, unfocusedLabelColor = SheetSub,
+    focusedTextColor = SheetText, unfocusedTextColor = SheetText, cursorColor = SheetGreen
 )

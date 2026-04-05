@@ -53,8 +53,8 @@ Type-safe project accessors is an incubating feature.
 
 > Task :composeApp:compileDebugKotlinAndroid
 w: file:///D:/hackaton/Hackitall-GIP/composeApp/src/commonMain/kotlin/org/example/project/ui/screens/CreateEventScreen.kt:41:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
-w: file:///D:/hackaton/Hackitall-GIP/composeApp/src/commonMain/kotlin/org/example/project/ui/screens/MainScreen.kt:415:40 'val Icons.Filled.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ExitToApp.
-w: file:///D:/hackaton/Hackitall-GIP/composeApp/src/commonMain/kotlin/org/example/project/ui/screens/MainScreen.kt:523:52 'val Icons.Filled.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ExitToApp.
+w: file:///D:/hackaton/Hackitall-GIP/composeApp/src/commonMain/kotlin/org/example/project/ui/screens/MainScreen.kt:422:40 'val Icons.Filled.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ExitToApp.
+w: file:///D:/hackaton/Hackitall-GIP/composeApp/src/commonMain/kotlin/org/example/project/ui/screens/MainScreen.kt:530:52 'val Icons.Filled.ExitToApp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ExitToApp.
 
 BUILD SUCCESSFUL in 24s
 36 actionable tasks: 3 executed, 33 up-to-date

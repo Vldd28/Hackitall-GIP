@@ -126,31 +126,38 @@ private fun CalendarIcon(tint: Color, modifier: Modifier = Modifier) {
     }
 }
 
-// Suggestion / lightbulb icon
+// Bright idea lightbulb icon
 @Composable
 private fun SuggestionIcon(tint: Color, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier.size(26.dp)) {
         val w = size.width; val h = size.height
-        // Bulb body
-        drawCircle(color = tint, radius = w * 0.28f, center = Offset(w * 0.5f, h * 0.38f))
-        // Glow ring
-        drawCircle(color = tint.copy(alpha = 0.18f), radius = w * 0.42f, center = Offset(w * 0.5f, h * 0.38f))
-        // Base/stem
+        // Outer glow
+        drawCircle(color = tint.copy(alpha = 0.12f), radius = w * 0.48f, center = Offset(w * 0.5f, h * 0.36f))
+        // Mid glow
+        drawCircle(color = tint.copy(alpha = 0.22f), radius = w * 0.36f, center = Offset(w * 0.5f, h * 0.36f))
+        // Bulb body (bright filled circle)
+        drawCircle(color = tint, radius = w * 0.26f, center = Offset(w * 0.5f, h * 0.36f))
+        // Shine highlight
+        drawCircle(color = Color.White.copy(alpha = 0.55f), radius = w * 0.09f, center = Offset(w * 0.40f, h * 0.27f))
+        // Neck/stem trapezoid
         val stem = Path().apply {
-            moveTo(w * 0.38f, h * 0.64f)
-            lineTo(w * 0.62f, h * 0.64f)
-            lineTo(w * 0.58f, h * 0.78f)
-            lineTo(w * 0.42f, h * 0.78f)
+            moveTo(w * 0.37f, h * 0.61f)
+            lineTo(w * 0.63f, h * 0.61f)
+            lineTo(w * 0.59f, h * 0.74f)
+            lineTo(w * 0.41f, h * 0.74f)
             close()
         }
         drawPath(stem, color = tint, style = Fill)
-        // Base cap
-        drawRoundRect(
-            color = tint,
-            topLeft = Offset(w * 0.38f, h * 0.78f),
-            size = androidx.compose.ui.geometry.Size(w * 0.24f, h * 0.08f),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.04f)
-        )
+        // Base lines (filament base)
+        drawLine(tint, Offset(w * 0.38f, h * 0.77f), Offset(w * 0.62f, h * 0.77f), strokeWidth = w * 0.07f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(tint, Offset(w * 0.40f, h * 0.84f), Offset(w * 0.60f, h * 0.84f), strokeWidth = w * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        // Rays (idea sparkle lines)
+        val rayColor = tint.copy(alpha = 0.7f)
+        drawLine(rayColor, Offset(w * 0.5f, h * 0.04f), Offset(w * 0.5f, h * 0.10f), strokeWidth = w * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(rayColor, Offset(w * 0.88f, h * 0.14f), Offset(w * 0.82f, h * 0.20f), strokeWidth = w * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(rayColor, Offset(w * 0.12f, h * 0.14f), Offset(w * 0.18f, h * 0.20f), strokeWidth = w * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(rayColor, Offset(w * 0.96f, h * 0.36f), Offset(w * 0.88f, h * 0.36f), strokeWidth = w * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        drawLine(rayColor, Offset(w * 0.04f, h * 0.36f), Offset(w * 0.12f, h * 0.36f), strokeWidth = w * 0.06f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
     }
 }
 
@@ -527,13 +534,13 @@ private fun ProfilePage(
 
                         Spacer(Modifier.height(8.dp))
 
-                        // Centered avatar
+                        // Centered avatar — larger
                         Box(contentAlignment = Alignment.Center) {
-                            Box(modifier = Modifier.size(130.dp).clip(CircleShape)
+                            Box(modifier = Modifier.size(158.dp).clip(CircleShape)
                                 .background(Brush.sweepGradient(listOf(SteelBlue, Teal, Mint, CreamDark, SteelBlue))))
                             Box(
-                                modifier = Modifier.size(120.dp)
-                                    .shadow(8.dp, CircleShape, ambientColor = SteelBlue.copy(alpha = 0.4f))
+                                modifier = Modifier.size(148.dp)
+                                    .shadow(10.dp, CircleShape, ambientColor = SteelBlue.copy(alpha = 0.4f))
                                     .clip(CircleShape).background(SteelBlueLight.copy(alpha = 0.35f)),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -541,7 +548,7 @@ private fun ProfilePage(
                                     AsyncImage(model = profile.avatarUrl, contentDescription = "Profile photo",
                                         contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(CircleShape))
                                 } else {
-                                    ProfileIcon(tint = Cream, modifier = Modifier.size(56.dp))
+                                    ProfileIcon(tint = Cream, modifier = Modifier.size(68.dp))
                                 }
                             }
                         }
@@ -555,16 +562,22 @@ private fun ProfilePage(
 
                         Spacer(Modifier.height(16.dp))
 
-                        // Friends left, Events right
+                        // Friends left, Events right — pushed to sides
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(start = 16.dp)
+                            ) {
                                 Text("0", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = profileTextColor)
                                 Text("Friends", fontSize = 12.sp, color = profileTextColor.copy(alpha = 0.75f), fontWeight = FontWeight.SemiBold)
                             }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(end = 16.dp)
+                            ) {
                                 Text("0", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = profileTextColor)
                                 Text("Events", fontSize = 12.sp, color = profileTextColor.copy(alpha = 0.75f), fontWeight = FontWeight.SemiBold)
                             }
@@ -823,7 +836,7 @@ fun MainScreen(
 
         // ── Bottom nav bar ───────────────────────────────────────────────
         Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-            .padding(horizontal = 20.dp).padding(bottom = 8.dp)) {
+            .padding(horizontal = 20.dp).padding(bottom = 18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .shadow(12.dp, RoundedCornerShape(28.dp))
