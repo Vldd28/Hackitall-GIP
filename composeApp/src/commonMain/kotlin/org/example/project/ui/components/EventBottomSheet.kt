@@ -26,11 +26,19 @@ import org.example.project.data.model.EventParticipant
 import org.example.project.data.repository.EventRepository
 import kotlin.math.*
 
-private val EventSheetDarkBg    = Color(0xFF31363F)
-private val EventSheetTealColor = Color(0xFF76ABAE)
-private val EventSheetLightText = Color(0xFFEEEEEE)
-private val EventSheetSubText   = Color(0xFFAAAAAA)
-private val EventSheetCardBg    = Color(0xFF3A3F47)
+// Dark palette
+private val EventSheetDarkBg    = Color(0xFF070F2B)
+private val EventSheetDarkCard  = Color(0xFF1B1A55)
+private val EventSheetTealDark  = Color(0xFF96DCFA)
+private val EventSheetLightText = Color(0xFFDCDCEB)
+private val EventSheetSubDark   = Color(0xFFA0A0C0)
+// Light palette
+private val EventSheetLightBg   = Color(0xFFF5FBF6)
+private val EventSheetLightCard = Color(0xFFE4F4E8)
+private val EventSheetTealLight = Color(0xFF4A9E8E)
+private val EventSheetDarkText  = Color(0xFF1E2D3A)
+private val EventSheetSubLight  = Color(0xFF6B8FA8)
+
 private val EventSheetRedColor  = Color(0xFFE8534A)
 
 private fun eventDistMeters(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
@@ -65,9 +73,16 @@ fun EventBottomSheet(
     tappedEvent: Event,
     allEvents: List<Event>,
     userId: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    isDarkMode: Boolean = true
 ) {
     val now = remember { nowIso() }
+
+    val bg       = if (isDarkMode) EventSheetDarkBg    else EventSheetLightBg
+    val cardBg   = if (isDarkMode) EventSheetDarkCard  else EventSheetLightCard
+    val teal     = if (isDarkMode) EventSheetTealDark  else EventSheetTealLight
+    val textCol  = if (isDarkMode) EventSheetLightText else EventSheetDarkText
+    val subText  = if (isDarkMode) EventSheetSubDark   else EventSheetSubLight
 
     val locationEvents = remember(tappedEvent, allEvents) {
         allEvents.filter { it.locationName == tappedEvent.locationName }
@@ -81,15 +96,15 @@ fun EventBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = EventSheetDarkBg,
-        contentColor = EventSheetLightText,
+        containerColor = bg,
+        contentColor = textCol,
         dragHandle = {
             Box(
                 Modifier
                     .padding(top = 10.dp, bottom = 6.dp)
                     .size(width = 40.dp, height = 4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(EventSheetSubText)
+                    .background(subText)
             )
         }
     ) {
@@ -99,28 +114,30 @@ fun EventBottomSheet(
         ) {
             item {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(tappedEvent.locationName, color = EventSheetTealColor,
+                    Text(tappedEvent.locationName, color = teal,
                         fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
 
             if (upcomingEvents.isNotEmpty()) {
-                item { EventSectionHeader("Upcoming Events") }
+                item { EventSectionHeader(title = "Upcoming Events", textColor = textCol) }
                 items(upcomingEvents) { event ->
-                    LocationEventCard(event = event, userId = userId, isUpcoming = true)
+                    LocationEventCard(event = event, userId = userId, isUpcoming = true,
+                        cardBg = cardBg, teal = teal, textColor = textCol, subText = subText)
                 }
             }
 
             if (pastEvents.isNotEmpty()) {
-                item { EventSectionHeader("Past Events") }
+                item { EventSectionHeader(title = "Past Events", textColor = textCol) }
                 items(pastEvents) { event ->
-                    LocationEventCard(event = event, userId = userId, isUpcoming = false)
+                    LocationEventCard(event = event, userId = userId, isUpcoming = false,
+                        cardBg = cardBg, teal = teal, textColor = textCol, subText = subText)
                 }
             }
 
             if (locationEvents.isEmpty()) {
                 item {
-                    Text("No events at this location yet.", color = EventSheetSubText,
+                    Text("No events at this location yet.", color = subText,
                         fontSize = 13.sp, modifier = Modifier.padding(16.dp))
                 }
             }
@@ -129,14 +146,22 @@ fun EventBottomSheet(
 }
 
 @Composable
-private fun EventSectionHeader(title: String) {
-    Text(text = title, color = EventSheetLightText, fontSize = 14.sp,
+private fun EventSectionHeader(title: String, textColor: Color) {
+    Text(text = title, color = textColor, fontSize = 14.sp,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
 }
 
 @Composable
-private fun LocationEventCard(event: Event, userId: String, isUpcoming: Boolean) {
+private fun LocationEventCard(
+    event: Event,
+    userId: String,
+    isUpcoming: Boolean,
+    cardBg: Color,
+    teal: Color,
+    textColor: Color,
+    subText: Color
+) {
     val repo = remember { EventRepository() }
     val scope = rememberCoroutineScope()
 
@@ -154,17 +179,23 @@ private fun LocationEventCard(event: Event, userId: String, isUpcoming: Boolean)
     val spotsLeft = event.maxParticipants - participants.size
     val isFull = spotsLeft <= 0
 
+    val thumbBg = cardBg.copy(alpha = 1f).let { Color(
+        (it.red * 255 + 20).coerceIn(0f, 255f).toInt(),
+        (it.green * 255 + 15).coerceIn(0f, 255f).toInt(),
+        (it.blue * 255 + 30).coerceIn(0f, 255f).toInt()
+    ) }
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = EventSheetCardBg)
+        colors = CardDefaults.cardColors(containerColor = cardBg)
     ) {
         Row(modifier = Modifier.padding(12.dp)) {
             Box(
                 modifier = Modifier
                     .size(64.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF4A5060)),
+                    .background(thumbBg),
                 contentAlignment = Alignment.Center
             ) {
                 Text("📍", fontSize = 24.sp)
@@ -173,17 +204,17 @@ private fun LocationEventCard(event: Event, userId: String, isUpcoming: Boolean)
             Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(event.title, color = EventSheetLightText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(event.title, color = textColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(3.dp))
-                Text(formatDateTime(event.dateTime), color = EventSheetTealColor, fontSize = 12.sp)
+                Text(formatDateTime(event.dateTime), color = teal, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
 
-                EventLobbyRow(current = participants.size, max = event.maxParticipants)
+                EventLobbyRow(current = participants.size, max = event.maxParticipants, teal = teal, subText = subText)
 
                 if (isUpcoming) {
                     Spacer(Modifier.height(8.dp))
                     when {
-                        hasJoined -> Text("✓ Joined", color = EventSheetTealColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        hasJoined -> Text("✓ Joined", color = teal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         isFull    -> Text("Full", color = EventSheetRedColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
@@ -196,7 +227,7 @@ private fun LocationEventCard(event: Event, userId: String, isUpcoming: Boolean)
                                         }
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = EventSheetTealColor),
+                                colors = ButtonDefaults.buttonColors(containerColor = teal),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
                                 modifier = Modifier.height(30.dp)
                             ) {
@@ -207,8 +238,8 @@ private fun LocationEventCard(event: Event, userId: String, isUpcoming: Boolean)
 
                             OutlinedButton(
                                 onClick = { showPartyDialog = true },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = EventSheetTealColor),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, EventSheetTealColor),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = teal),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, teal),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
                                 modifier = Modifier.height(30.dp)
                             ) {
@@ -226,6 +257,7 @@ private fun LocationEventCard(event: Event, userId: String, isUpcoming: Boolean)
     if (showPartyDialog) {
         EventPartyJoinDialog(
             event = event, spotsLeft = spotsLeft, userId = userId,
+            bg = cardBg, teal = teal, textColor = textColor, subText = subText,
             onConfirm = { _ ->
                 showPartyDialog = false
                 scope.launch {
@@ -242,25 +274,25 @@ private fun LocationEventCard(event: Event, userId: String, isUpcoming: Boolean)
 }
 
 @Composable
-private fun EventLobbyRow(current: Int, max: Int) {
+private fun EventLobbyRow(current: Int, max: Int, teal: Color, subText: Color) {
     val fraction = if (max > 0) current.toFloat() / max else 0f
     val barColor = when {
         fraction >= 1f    -> EventSheetRedColor
         fraction >= 0.75f -> Color(0xFFFFAA44)
-        else              -> EventSheetTealColor
+        else              -> teal
     }
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Groups, null, tint = EventSheetSubText, modifier = Modifier.size(13.dp))
+            Icon(Icons.Default.Groups, null, tint = subText, modifier = Modifier.size(13.dp))
             Spacer(Modifier.width(4.dp))
-            Text("$current / $max spots", color = EventSheetSubText, fontSize = 12.sp)
+            Text("$current / $max spots", color = subText, fontSize = 12.sp)
         }
         Spacer(Modifier.height(4.dp))
         LinearProgressIndicator(
             progress = { fraction.coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
             color = barColor,
-            trackColor = Color(0xFF4A5060)
+            trackColor = subText.copy(alpha = 0.2f)
         )
     }
 }
@@ -270,6 +302,10 @@ private fun EventPartyJoinDialog(
     event: Event,
     spotsLeft: Int,
     userId: String,
+    bg: Color,
+    teal: Color,
+    textColor: Color,
+    subText: Color,
     onConfirm: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -278,14 +314,14 @@ private fun EventPartyJoinDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = EventSheetDarkBg,
-        titleContentColor = EventSheetLightText,
-        textContentColor = EventSheetLightText,
+        containerColor = bg,
+        titleContentColor = textColor,
+        textContentColor = textColor,
         title = { Text("Join as Party", fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("How many people in your group?", color = EventSheetSubText, fontSize = 13.sp)
-                Text("$partySize people", color = EventSheetTealColor, fontSize = 28.sp,
+                Text("How many people in your group?", color = subText, fontSize = 13.sp)
+                Text("$partySize people", color = teal, fontSize = 28.sp,
                     fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
                 Slider(
                     value = partySize.toFloat(),
@@ -293,21 +329,21 @@ private fun EventPartyJoinDialog(
                     valueRange = 2f..maxParty.toFloat().coerceAtLeast(2f),
                     steps = maxOf(0, maxParty - 3),
                     colors = SliderDefaults.colors(
-                        thumbColor = EventSheetTealColor,
-                        activeTrackColor = EventSheetTealColor,
-                        inactiveTrackColor = EventSheetCardBg
+                        thumbColor = teal,
+                        activeTrackColor = teal,
+                        inactiveTrackColor = subText.copy(alpha = 0.2f)
                     )
                 )
-                Text("$spotsLeft spots available", color = EventSheetSubText, fontSize = 12.sp,
+                Text("$spotsLeft spots available", color = subText, fontSize = 12.sp,
                     modifier = Modifier.align(Alignment.CenterHorizontally))
             }
         },
         confirmButton = {
             Button(onClick = { onConfirm(partySize) },
-                colors = ButtonDefaults.buttonColors(containerColor = EventSheetTealColor),
+                colors = ButtonDefaults.buttonColors(containerColor = teal),
                 enabled = partySize <= spotsLeft
             ) { Text("Book $partySize spots", color = Color.White) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = EventSheetSubText) } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = subText) } }
     )
 }

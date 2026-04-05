@@ -60,6 +60,7 @@ actual fun MapView(
     onCenterConsumed: () -> Unit,
     onEventCreated: (Event) -> Unit,
     onEventJoined: (Event) -> Unit,
+    isDarkMode: Boolean,
     modifier: Modifier
 ) {
     val firstEvent = events.firstOrNull()
@@ -168,14 +169,16 @@ actual fun MapView(
             place = place, allEvents = events, userId = userId,
             onDismiss = { selectedPlace = null },
             onEventCreated = onEventCreated,
-            onEventJoined = onEventJoined
+            onEventJoined = onEventJoined,
+            isDarkMode = isDarkMode
         )
     }
 
     selectedEvent?.let { event ->
         EventBottomSheet(
             tappedEvent = event, allEvents = events, userId = userId,
-            onDismiss = { selectedEvent = null }
+            onDismiss = { selectedEvent = null },
+            isDarkMode = isDarkMode
         )
     }
 }

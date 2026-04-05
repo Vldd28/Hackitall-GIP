@@ -47,6 +47,20 @@ private val DEFAULT_POSITION = LatLng(44.4268, 26.1025) // Bucharest
 private const val DEFAULT_ZOOM = 14f
 private const val MIN_ZOOM_FOR_PLACES = 14f
 
+// Special events with red pins (always the same 10)
+private val RED_PIN_EVENT_IDS = setOf(
+    "fe835a07-5b96-4d95-bcce-0bd0d1788455", // Street Art Walking Tour
+    "9a0994bc-296c-44d2-9048-d8537ca2df1a", // Jazz Evening at Paradiso
+    "ea7ea491-f8e3-4c73-bbf0-884b8d1e48b4", // Kotlin & KMP Meetup Amsterdam
+    "fd0f7e1c-233e-4671-b520-c749bd3d9b9d", // Vondelpark Morning Run
+    "red-event-5", // Placeholder IDs for 10 total
+    "red-event-6",
+    "red-event-7",
+    "red-event-8",
+    "red-event-9",
+    "red-event-10"
+)
+
 private val WANDR_MAP_STYLE = MapStyleOptions("""
 [
   { "elementType": "geometry", "stylers": [{ "color": "#EAF5EC" }] },
@@ -69,20 +83,52 @@ private val WANDR_MAP_STYLE = MapStyleOptions("""
 ]
 """.trimIndent())
 
-private fun PlaceType.pinColor(): Int = when (this) {
-    PlaceType.MUSEUM     -> android.graphics.Color.parseColor("#7B9E87")
-    PlaceType.CAFE       -> android.graphics.Color.parseColor("#91C4A0")
-    PlaceType.CLUB       -> android.graphics.Color.parseColor("#6AAF8A")
-    PlaceType.RESTAURANT -> android.graphics.Color.parseColor("#4E9A6F")
+private val WANDR_DARK_MAP_STYLE = MapStyleOptions("""
+[
+  { "elementType": "geometry", "stylers": [{ "color": "#070F2B" }] },
+  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#070F2B" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#DCDCEB" }] },
+  { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
+  { "featureType": "poi.park", "elementType": "geometry", "stylers": [{ "color": "#1B1A55" }] },
+  { "featureType": "poi.park", "stylers": [{ "visibility": "on" }] },
+  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#1B1A55" }] },
+  { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#DCDCEB" }] },
+  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#535C91" }] },
+  { "featureType": "road", "elementType": "geometry.stroke", "stylers": [{ "color": "#1B1A55" }] },
+  { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#535C91" }] },
+  { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#1B1A55" }] },
+  { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{ "color": "#DCDCEB" }] },
+  { "featureType": "transit", "stylers": [{ "visibility": "off" }] },
+  { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "color": "#1B1A55" }] },
+  { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [{ "color": "#DCDCEB" }] },
+  { "featureType": "landscape", "elementType": "geometry", "stylers": [{ "color": "#070F2B" }] }
+]
+""".trimIndent())
+
+private fun PlaceType.pinColor(isDarkMode: Boolean): Int = when (this) {
+    PlaceType.MUSEUM     -> if (isDarkMode) android.graphics.Color.parseColor("#535C91") else android.graphics.Color.parseColor("#7B9E87")
+    PlaceType.CAFE       -> if (isDarkMode) android.graphics.Color.parseColor("#6A7AB5") else android.graphics.Color.parseColor("#91C4A0")
+    PlaceType.CLUB       -> if (isDarkMode) android.graphics.Color.parseColor("#4A5A8A") else android.graphics.Color.parseColor("#6AAF8A")
+    PlaceType.RESTAURANT -> if (isDarkMode) android.graphics.Color.parseColor("#3A4A7A") else android.graphics.Color.parseColor("#4E9A6F")
 }
 
-private fun createEventPinBitmap(count: Int): Bitmap {
+private fun createEventPinBitmap(count: Int, isDarkMode: Boolean, isRedPin: Boolean = false): Bitmap {
     val w = 72; val h = 92
     val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
-    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.parseColor("#5A8A6A") }
+    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { 
+        color = when {
+            isRedPin -> android.graphics.Color.parseColor("#E74C3C") // Red for special events
+            isDarkMode -> android.graphics.Color.parseColor("#535C91")
+            else -> android.graphics.Color.parseColor("#5A8A6A")
+        }
+    }
     val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.parseColor("#2D4A35")
+        color = when {
+            isRedPin -> android.graphics.Color.parseColor("#C0392B") // Dark red stroke
+            isDarkMode -> android.graphics.Color.parseColor("#1B1A55")
+            else -> android.graphics.Color.parseColor("#2D4A35")
+        }
         style = Paint.Style.STROKE
         strokeWidth = 4f
     }
@@ -106,12 +152,14 @@ private fun createEventPinBitmap(count: Int): Bitmap {
     return bitmap
 }
 
-private fun createPlaceBitmap(type: PlaceType): Bitmap {
+private fun createPlaceBitmap(type: PlaceType, isDarkMode: Boolean): Bitmap {
     val w = 48; val h = 64
     val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
-    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = type.pinColor() }
-    val whitePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE }
+    val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = type.pinColor(isDarkMode) }
+    val whitePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { 
+        color = if (isDarkMode) android.graphics.Color.parseColor("#070F2B") else android.graphics.Color.WHITE
+    }
     val radius = w / 2f
     canvas.drawCircle(w / 2f, radius, radius, bgPaint)
     val tip = Path().apply {
@@ -140,6 +188,7 @@ actual fun MapView(
     onCenterConsumed: () -> Unit,
     onEventCreated: (Event) -> Unit,
     onEventJoined: (Event) -> Unit,
+    isDarkMode: Boolean,
     modifier: Modifier
 ) {
     val placesViewModel = viewModel<PlacesViewModel>()
@@ -147,8 +196,8 @@ actual fun MapView(
     val searchResult by placesViewModel.searchResult.collectAsState()
     var selectedPlace by remember { mutableStateOf<PlaceResult?>(null) }
 
-    val placeBitmaps = remember { PlaceType.entries.associateWith { createPlaceBitmap(it) } }
-    val placeIcons = remember { mutableMapOf<PlaceType, BitmapDescriptor>() }
+    val placeBitmaps = remember(isDarkMode) { PlaceType.entries.associateWith { createPlaceBitmap(it, isDarkMode) } }
+    val placeIcons = remember(isDarkMode) { mutableMapOf<PlaceType, BitmapDescriptor>() }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(DEFAULT_POSITION, DEFAULT_ZOOM)
@@ -213,8 +262,11 @@ actual fun MapView(
     val eventsByLocation = remember(events) {
         events.groupBy { Pair((it.lat * 1000).toInt(), (it.lng * 1000).toInt()) }
     }
-    val eventPinBitmaps = remember(eventsByLocation) {
-        eventsByLocation.mapValues { (_, evts) -> createEventPinBitmap(evts.size) }
+    val eventPinBitmaps = remember(eventsByLocation, isDarkMode) {
+        eventsByLocation.mapValues { (_, evts) -> 
+            val hasRedEvent = evts.any { it.id in RED_PIN_EVENT_IDS }
+            createEventPinBitmap(evts.size, isDarkMode, hasRedEvent)
+        }
     }
     val eventPinIcons = remember(eventPinBitmaps) {
         eventPinBitmaps.mapValues { (_, bmp) -> BitmapDescriptorFactory.fromBitmap(bmp) }
@@ -224,7 +276,7 @@ actual fun MapView(
     GoogleMap(
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
-        properties = MapProperties(mapStyleOptions = WANDR_MAP_STYLE),
+        properties = MapProperties(mapStyleOptions = if (isDarkMode) WANDR_DARK_MAP_STYLE else WANDR_MAP_STYLE),
         uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false, compassEnabled = false)
     ) {
         // Event location pins — clicking opens the place/location popup
@@ -275,7 +327,8 @@ actual fun MapView(
             place = place, allEvents = events, userId = userId,
             onDismiss = { selectedPlace = null },
             onEventCreated = onEventCreated,
-            onEventJoined = onEventJoined
+            onEventJoined = onEventJoined,
+            isDarkMode = isDarkMode
         )
     }
 
@@ -287,14 +340,17 @@ actual fun MapView(
                 .align(Alignment.TopCenter)
                 .padding(top = 56.dp)
                 .shadow(4.dp, CircleShape)
-                .background(Color.White.copy(alpha = 0.92f), CircleShape)
+                .background(
+                    if (isDarkMode) Color(27, 26, 85).copy(alpha = 0.92f) else Color.White.copy(alpha = 0.92f),
+                    CircleShape
+                )
                 .size(40.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Navigation,
                 contentDescription = "Compass",
-                tint = Color(0xFF5A8A6A),
+                tint = if (isDarkMode) Color(150, 220, 250) else Color(0xFF5A8A6A),
                 modifier = Modifier
                     .size(24.dp)
                     .graphicsLayer { rotationZ = -bearing }

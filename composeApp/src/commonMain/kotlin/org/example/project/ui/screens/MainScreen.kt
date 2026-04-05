@@ -529,19 +529,24 @@ private fun ProfilePage(
     onSignOut: () -> Unit,
     eventPhotos: List<EventPhoto> = emptyList(),
     joinedEvents: List<Event> = emptyList(),
-    onNavigateToEvent: (Event) -> Unit = {}
+    onNavigateToEvent: (Event) -> Unit = {},
+    isDarkMode: Boolean = false,
+    onDarkModeToggle: () -> Unit = {}
 ) {
     var showHobbyPicker by remember { mutableStateOf(false) }
-    var isDarkMode by remember { mutableStateOf(false) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
     var showSignOutConfirmTop by remember { mutableStateOf(false) }
     var showFriendsDialog by remember { mutableStateOf(false) }
     var selectedFriend by remember { mutableStateOf<FriendInfo?>(null) }
 
-    val bgColor = Color(180, 222, 189)
-    val profileTextColor = Color(0xFF3A5A6E)
-    val interestCardColor = Color(225, 245, 229)
-    val interestChipColor = Color(210, 237, 216)
+    // Dark mode colors
+    val bgColor = if (isDarkMode) Color(7, 15, 43) else Color(180, 222, 189)
+    val profileTextColor = if (isDarkMode) Color(220, 220, 235) else Color(0xFF3A5A6E)
+    val interestCardColor = if (isDarkMode) Color(27, 26, 85) else Color(225, 245, 229)
+    val interestChipColor = if (isDarkMode) Color(83, 92, 145) else Color(210, 237, 216)
+    val eventMemoriesHeaderBg = if (isDarkMode) Color(27, 26, 85) else SteelBlue
+    val eventMemoriesCardBg = if (isDarkMode) Color(83, 92, 145) else Cream.copy(alpha = 0.85f)
+    val bottomBarBg = if (isDarkMode) Color(27, 26, 85) else Cream
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isLoading) {
@@ -567,7 +572,7 @@ private fun ProfilePage(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(
-                                onClick = { isDarkMode = !isDarkMode },
+                                onClick = onDarkModeToggle,
                                 modifier = Modifier.size(44.dp)
                                     .shadow(4.dp, CircleShape)
                                     .background(if (isDarkMode) SteelBlueDark else Cream, CircleShape)
@@ -649,7 +654,7 @@ private fun ProfilePage(
                                 onDismissRequest = { showFriendsDialog = false },
                                 confirmButton = {
                                     TextButton(onClick = { showFriendsDialog = false }) {
-                                        Text("Close", color = SteelBlueDark)
+                                        Text("Close", color = if (isDarkMode) Color(150, 220, 250) else SteelBlueDark)
                                     }
                                 },
                                 title = { Text("Friends", fontWeight = FontWeight.Bold, color = profileTextColor) },
@@ -668,7 +673,7 @@ private fun ProfilePage(
                                                 Box(
                                                     modifier = Modifier.size(52.dp)
                                                         .clip(CircleShape)
-                                                        .background(SteelBlueLight),
+                                                        .background(if (isDarkMode) Color(83, 92, 145) else SteelBlueLight),
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     if (!friend.avatarUrl.isNullOrBlank()) {
@@ -679,7 +684,7 @@ private fun ProfilePage(
                                                             modifier = Modifier.fillMaxSize().clip(CircleShape)
                                                         )
                                                     } else {
-                                                        ProfileIcon(tint = Cream, modifier = Modifier.size(28.dp))
+                                                        ProfileIcon(tint = if (isDarkMode) Color(220, 220, 235) else Cream, modifier = Modifier.size(28.dp))
                                                     }
                                                 }
                                                 Spacer(Modifier.width(12.dp))
@@ -691,7 +696,7 @@ private fun ProfilePage(
                                         }
                                     }
                                 },
-                                containerColor = Color(225, 245, 229),
+                                containerColor = if (isDarkMode) Color(27, 26, 85) else Color(225, 245, 229),
                                 shape = RoundedCornerShape(20.dp)
                             )
                         }
@@ -792,17 +797,21 @@ private fun ProfilePage(
                             // Group photos by event
                             val photosByEvent = eventPhotos.groupBy { it.eventId }
 
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
+                            val headerModifier = if (isDarkMode) {
+                                Modifier.fillMaxWidth()
                                     .padding(horizontal = 20.dp)
                                     .shadow(6.dp, RoundedCornerShape(20.dp))
-                                    .background(
-                                        Brush.horizontalGradient(listOf(SteelBlue, Teal)),
-                                        RoundedCornerShape(20.dp)
-                                    )
+                                    .background(eventMemoriesHeaderBg, RoundedCornerShape(20.dp))
                                     .padding(horizontal = 20.dp, vertical = 12.dp)
-                            ) {
+                            } else {
+                                Modifier.fillMaxWidth()
+                                    .padding(horizontal = 20.dp)
+                                    .shadow(6.dp, RoundedCornerShape(20.dp))
+                                    .background(Brush.horizontalGradient(listOf(SteelBlue, Teal)), RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                            }
+                            
+                            Box(modifier = headerModifier) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text("📸", fontSize = 20.sp)
                                     Spacer(Modifier.width(10.dp))
@@ -822,7 +831,7 @@ private fun ProfilePage(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
                                     shape = RoundedCornerShape(18.dp),
                                     elevation = CardDefaults.cardElevation(4.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Cream.copy(alpha = 0.85f))
+                                    colors = CardDefaults.cardColors(containerColor = eventMemoriesCardBg)
                                 ) {
                                     Column(modifier = Modifier.padding(14.dp)) {
                                         // Event title
@@ -830,7 +839,7 @@ private fun ProfilePage(
                                             event?.title ?: "Event",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = SteelBlueDark
+                                            color = if (isDarkMode) Color(220, 220, 235) else SteelBlueDark
                                         )
                                         if (event != null) {
                                             Row(
@@ -840,14 +849,14 @@ private fun ProfilePage(
                                                 Icon(
                                                     Icons.Default.LocationOn,
                                                     contentDescription = "Go to location",
-                                                    tint = Teal,
+                                                    tint = if (isDarkMode) Color(150, 220, 250) else Teal,
                                                     modifier = Modifier.size(13.dp)
                                                 )
                                                 Spacer(Modifier.width(3.dp))
                                                 Text(
                                                     event.locationName,
                                                     fontSize = 11.sp,
-                                                    color = Teal,
+                                                    color = if (isDarkMode) Color(150, 220, 250) else Teal,
                                                     fontWeight = FontWeight.Medium,
                                                     textDecoration = TextDecoration.Underline
                                                 )
@@ -1194,7 +1203,8 @@ private fun CalendarPage(
     todayMonth: Int,
     todayDay: Int,
     onMonthChange: (month: Int, year: Int) -> Unit,
-    onDaySelected: (day: Int) -> Unit
+    onDaySelected: (day: Int) -> Unit,
+    isDarkMode: Boolean = false
 ) {
     val firstDayOfWeek = LocalDate(displayYear, displayMonth, 1).dayOfWeek.value
     val totalDays = calDaysInMonth(displayYear, displayMonth)
@@ -1212,17 +1222,26 @@ private fun CalendarPage(
         counts
     }
 
+    // Dark mode colors
+    val bgGradient = if (isDarkMode) {
+        Brush.verticalGradient(listOf(Color(7, 15, 43), Color(27, 26, 85), Color(7, 15, 43)))
+    } else {
+        Brush.verticalGradient(listOf(Teal.copy(alpha = 0.08f), Cream, Mint.copy(alpha = 0.06f)))
+    }
+    val cardBg = if (isDarkMode) Color(27, 26, 85).copy(alpha = 0.95f) else Color.White.copy(alpha = 0.95f)
+    val textColor = if (isDarkMode) Color(220, 220, 235) else SteelBlueDark
+    val accentColor = if (isDarkMode) Color(150, 220, 250) else Teal
+    val dayTextColor = if (isDarkMode) Color(180, 180, 200) else TextDark.copy(alpha = 0.7f)
+
     Box(
-        modifier = Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Teal.copy(alpha = 0.08f), Cream, Mint.copy(alpha = 0.06f)))
-        ),
+        modifier = Modifier.fillMaxSize().background(bgGradient),
         contentAlignment = Alignment.Center
     ) {
         Card(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.95f))
+            colors = CardDefaults.cardColors(containerColor = cardBg)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 // Month header with prev / next
@@ -1235,17 +1254,17 @@ private fun CalendarPage(
                         if (displayMonth == 1) onMonthChange(12, displayYear - 1)
                         else onMonthChange(displayMonth - 1, displayYear)
                     }, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Default.KeyboardArrowLeft, "Previous", tint = SteelBlueDark)
+                        Icon(Icons.Default.KeyboardArrowLeft, "Previous", tint = textColor)
                     }
                     Text(
                         "${calMonthNames[displayMonth - 1]} $displayYear",
-                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = SteelBlueDark
+                        fontSize = 18.sp, fontWeight = FontWeight.Bold, color = textColor
                     )
                     IconButton(onClick = {
                         if (displayMonth == 12) onMonthChange(1, displayYear + 1)
                         else onMonthChange(displayMonth + 1, displayYear)
                     }, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Default.KeyboardArrowRight, "Next", tint = SteelBlueDark)
+                        Icon(Icons.Default.KeyboardArrowRight, "Next", tint = textColor)
                     }
                 }
 
@@ -1255,7 +1274,7 @@ private fun CalendarPage(
                 Row(modifier = Modifier.fillMaxWidth()) {
                     listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su").forEach { d ->
                         Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            Text(d, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = SteelBlue)
+                            Text(d, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = accentColor)
                         }
                     }
                 }
@@ -1288,7 +1307,7 @@ private fun CalendarPage(
                                                 hasEvents -> Modifier.background(
                                                     Teal.copy(alpha = 0.3f))
                                                 isToday -> Modifier.border(
-                                                    1.5.dp, Teal, RoundedCornerShape(10.dp))
+                                                    1.5.dp, accentColor, RoundedCornerShape(10.dp))
                                                 else -> Modifier
                                             }
                                         )
@@ -1301,9 +1320,9 @@ private fun CalendarPage(
                                         fontWeight = if (hasEvents || isToday)
                                             FontWeight.Bold else FontWeight.Normal,
                                         color = when {
-                                            hasEvents -> SteelBlueDark
-                                            isToday -> TealDark
-                                            else -> TextDark.copy(alpha = 0.7f)
+                                            hasEvents -> textColor
+                                            isToday -> accentColor
+                                            else -> dayTextColor
                                         }
                                     )
                                 }
@@ -1325,37 +1344,44 @@ private fun MinimizedCalendar(
     currentIndex: Int,
     onNext: () -> Unit,
     onExpand: () -> Unit,
+    isDarkMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val currentEvent = dayEvents.getOrNull(currentIndex)
     val monthShort = calMonthNames[month - 1].take(3)
 
+    val cardBg = if (isDarkMode) Color(27, 26, 85).copy(alpha = 0.97f) else Color.White.copy(alpha = 0.97f)
+    val textColor = if (isDarkMode) Color(220, 220, 235) else SteelBlueDark
+    val subTextColor = if (isDarkMode) Color(150, 220, 250) else SteelBlue
+    val accentColor = if (isDarkMode) Color(150, 220, 250) else TealDark
+    val btnColor = if (isDarkMode) Color(74, 158, 142) else Teal
+
     Card(
         modifier = modifier.fillMaxWidth().clickable { onExpand() },
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(10.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.97f))
+        colors = CardDefaults.cardColors(containerColor = cardBg)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Default.KeyboardArrowUp, "Expand",
-                tint = SteelBlue, modifier = Modifier.size(18.dp))
+                tint = subTextColor, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text("$monthShort $selectedDay, $year",
-                    fontWeight = FontWeight.Bold, fontSize = 14.sp, color = SteelBlueDark)
+                    fontWeight = FontWeight.Bold, fontSize = 14.sp, color = textColor)
                 Text("${dayEvents.size} event${if (dayEvents.size != 1) "s" else ""}",
-                    fontSize = 11.sp, color = SteelBlue)
+                    fontSize = 11.sp, color = subTextColor)
             }
 
             currentEvent?.let { event ->
                 Text("${currentIndex + 1}/${dayEvents.size}",
-                    fontSize = 11.sp, color = SteelBlue, fontWeight = FontWeight.SemiBold)
+                    fontSize = 11.sp, color = subTextColor, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.width(6.dp))
-                Text(event.title, fontSize = 13.sp, color = TealDark,
+                Text(event.title, fontSize = 13.sp, color = accentColor,
                     fontWeight = FontWeight.SemiBold, maxLines = 1,
                     modifier = Modifier.widthIn(max = 100.dp))
             }
@@ -1365,7 +1391,7 @@ private fun MinimizedCalendar(
                 Button(
                     onClick = onNext,
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                    colors = ButtonDefaults.buttonColors(containerColor = btnColor),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp)
                 ) {
@@ -1396,7 +1422,8 @@ private fun MapPage(
     centerLng: Double? = null,
     onCenterConsumed: () -> Unit = {},
     onEventCreated: (Event) -> Unit = {},
-    onEventJoined: (Event) -> Unit = {}
+    onEventJoined: (Event) -> Unit = {},
+    isDarkMode: Boolean = false
 ) {
     MapView(
         events = events,
@@ -1410,6 +1437,7 @@ private fun MapPage(
         onCenterConsumed = onCenterConsumed,
         onEventCreated = onEventCreated,
         onEventJoined = onEventJoined,
+        isDarkMode = isDarkMode,
         modifier = Modifier.fillMaxSize()
     )
 }
@@ -1453,6 +1481,7 @@ fun MainScreen(
     // 0 = calendar, 1 = map, 2 = profile
     var selectedTab by remember { mutableStateOf(1) }
     var mapSearchQuery by remember { mutableStateOf("") }
+    var isDarkMode by remember { mutableStateOf(false) }
 
     // Calendar state
     val now = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()) }
@@ -1473,6 +1502,7 @@ fun MainScreen(
                 events = events, displayMonth = displayMonth, displayYear = displayYear,
                 todayYear = now.year, todayMonth = now.monthNumber, todayDay = now.dayOfMonth,
                 onMonthChange = { m, y -> displayMonth = m; displayYear = y },
+                isDarkMode = isDarkMode,
                 onDaySelected = { day ->
                     val dayEvts = eventsForDay(events, displayYear, displayMonth, day)
                     if (dayEvts.isNotEmpty()) {
@@ -1491,7 +1521,8 @@ fun MainScreen(
                 centerLat = mapCenterLat, centerLng = mapCenterLng,
                 onCenterConsumed = { mapCenterLat = null; mapCenterLng = null },
                 onEventCreated = { event -> eventViewModel.addEvent(event); selfieViewModel.triggerSelfieForEvent(event) },
-                onEventJoined = { event -> selfieViewModel.triggerSelfieForEvent(event) }
+                onEventJoined = { event -> selfieViewModel.triggerSelfieForEvent(event) },
+                isDarkMode = isDarkMode
             )
             selectedTab == 2 -> {
                 val dummyPhotos = remember {
@@ -1546,7 +1577,9 @@ fun MainScreen(
                         selectedTab = 1
                         mapCenterLat = event.lat
                         mapCenterLng = event.lng
-                    }
+                    },
+                    isDarkMode = isDarkMode,
+                    onDarkModeToggle = { isDarkMode = !isDarkMode }
                 )
             }
         }
@@ -1562,6 +1595,7 @@ fun MainScreen(
                     mapCenterLat = event.lat; mapCenterLng = event.lng
                 },
                 onExpand = { calendarMinimized = false },
+                isDarkMode = isDarkMode,
                 modifier = Modifier.align(Alignment.BottomCenter)
                     .padding(bottom = 96.dp, start = 20.dp, end = 20.dp)
             )
@@ -1582,7 +1616,10 @@ fun MainScreen(
                         value = searchText,
                         onValueChange = { searchText = it },
                         singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(color = TextDark, fontSize = 15.sp),
+                        textStyle = androidx.compose.ui.text.TextStyle(
+                            color = if (isDarkMode) Color(220, 220, 235) else TextDark, 
+                            fontSize = 15.sp
+                        ),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                             imeAction = androidx.compose.ui.text.input.ImeAction.Search
                         ),
@@ -1598,16 +1635,30 @@ fun MainScreen(
                         ),
                         modifier = Modifier.fillMaxWidth()
                             .shadow(8.dp, RoundedCornerShape(24.dp))
-                            .background(BarWhite, RoundedCornerShape(24.dp))
+                            .background(
+                                if (isDarkMode) Color(27, 26, 85) else BarWhite, 
+                                RoundedCornerShape(24.dp)
+                            )
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         decorationBox = { inner ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Search, null, tint = SteelBlue, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Search, null, 
+                                    tint = if (isDarkMode) Color(150, 220, 250) else SteelBlue, 
+                                    modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Box { if (searchText.isEmpty()) Text("Search location…", color = SteelBlue.copy(alpha = 0.5f), fontSize = 15.sp); inner() }
+                                Box { 
+                                    if (searchText.isEmpty()) Text(
+                                        "Search location…", 
+                                        color = if (isDarkMode) Color(150, 220, 250).copy(alpha = 0.5f) else SteelBlue.copy(alpha = 0.5f), 
+                                        fontSize = 15.sp
+                                    )
+                                    inner() 
+                                }
                                 Spacer(Modifier.weight(1f))
                                 IconButton(onClick = { showSearchBar = false; searchText = "" }, modifier = Modifier.size(24.dp)) {
-                                    Icon(Icons.Default.Close, null, tint = SteelBlue, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Close, null, 
+                                        tint = if (isDarkMode) Color(150, 220, 250) else SteelBlue, 
+                                        modifier = Modifier.size(16.dp))
                                 }
                             }
                         }
@@ -1615,8 +1666,11 @@ fun MainScreen(
                 }
             } else {
                 IconButton(onClick = { showSearchBar = true }, modifier = Modifier.statusBarsPadding().padding(start = 16.dp, top = 12.dp)
-                    .align(Alignment.TopStart).shadow(6.dp, CircleShape).background(BarWhite, CircleShape).size(44.dp)) {
-                    Icon(Icons.Default.Search, "Search place", tint = SteelBlueDark, modifier = Modifier.size(22.dp))
+                    .align(Alignment.TopStart).shadow(6.dp, CircleShape)
+                    .background(if (isDarkMode) Color(27, 26, 85) else BarWhite, CircleShape).size(44.dp)) {
+                    Icon(Icons.Default.Search, "Search place", 
+                        tint = if (isDarkMode) Color(150, 220, 250) else SteelBlueDark, 
+                        modifier = Modifier.size(22.dp))
                 }
             }
             IconButton(onClick = {
@@ -1627,26 +1681,42 @@ fun MainScreen(
                     mapCenterLng = random.lng
                 }
             }, modifier = Modifier.statusBarsPadding().padding(end = 16.dp, top = 12.dp)
-                .align(Alignment.TopEnd).shadow(6.dp, CircleShape).background(BarWhite, CircleShape).size(44.dp)) {
-                SuggestionIcon(tint = SteelBlueDark, modifier = Modifier.size(24.dp))
+                .align(Alignment.TopEnd).shadow(6.dp, CircleShape)
+                .background(if (isDarkMode) Color(27, 26, 85) else BarWhite, CircleShape).size(44.dp)) {
+                SuggestionIcon(tint = if (isDarkMode) Color(150, 220, 250) else SteelBlueDark, modifier = Modifier.size(24.dp))
             }
         }
 
         // ── Bottom nav bar ───────────────────────────────────────────────
+        val bottomBarBg = if (isDarkMode) Color(27, 26, 85) else Cream
+        val bottomBarModifier = if (isDarkMode) {
+            Modifier.fillMaxWidth()
+                .shadow(12.dp, RoundedCornerShape(28.dp))
+                .background(bottomBarBg, RoundedCornerShape(28.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        } else {
+            Modifier.fillMaxWidth()
+                .shadow(12.dp, RoundedCornerShape(28.dp))
+                .background(Brush.horizontalGradient(listOf(Cream, BarWhite, Cream)), RoundedCornerShape(28.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        }
+        
         Box(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .padding(horizontal = 20.dp).padding(bottom = 48.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth()
-                    .shadow(12.dp, RoundedCornerShape(28.dp))
-                    .background(Brush.horizontalGradient(listOf(Cream, BarWhite, Cream)), RoundedCornerShape(28.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = bottomBarModifier,
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // LEFT — Calendar
                 IconButton(onClick = { selectedTab = 0 }, modifier = Modifier.size(44.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CalendarIcon(tint = if (selectedTab == 0) SteelBlue else SteelBlueLight.copy(alpha = 0.6f),
+                        CalendarIcon(
+                            tint = if (isDarkMode) {
+                                if (selectedTab == 0) Color(150, 220, 250) else Color(150, 220, 250).copy(alpha = 0.5f)
+                            } else {
+                                if (selectedTab == 0) SteelBlue else SteelBlueLight.copy(alpha = 0.6f)
+                            },
                             modifier = Modifier.size(22.dp))
                         if (selectedTab == 0) SelectedDot()
                     }
@@ -1655,7 +1725,12 @@ fun MainScreen(
                 // MIDDLE — Location arrow (iPhone style)
                 IconButton(onClick = { selectedTab = 1 }, modifier = Modifier.size(44.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        LocationArrowIcon(tint = if (selectedTab == 1) SteelBlue else SteelBlueLight.copy(alpha = 0.6f),
+                        LocationArrowIcon(
+                            tint = if (isDarkMode) {
+                                if (selectedTab == 1) Color(150, 220, 250) else Color(150, 220, 250).copy(alpha = 0.5f)
+                            } else {
+                                if (selectedTab == 1) SteelBlue else SteelBlueLight.copy(alpha = 0.6f)
+                            },
                             modifier = Modifier.size(22.dp))
                         if (selectedTab == 1) SelectedDot()
                     }
@@ -1664,7 +1739,12 @@ fun MainScreen(
                 // RIGHT — Profile
                 IconButton(onClick = { selectedTab = 2 }, modifier = Modifier.size(44.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ProfileIcon(tint = if (selectedTab == 2) SteelBlue else SteelBlueLight.copy(alpha = 0.6f),
+                        ProfileIcon(
+                            tint = if (isDarkMode) {
+                                if (selectedTab == 2) Color(150, 220, 250) else Color(150, 220, 250).copy(alpha = 0.5f)
+                            } else {
+                                if (selectedTab == 2) SteelBlue else SteelBlueLight.copy(alpha = 0.6f)
+                            },
                             modifier = Modifier.size(22.dp))
                         if (selectedTab == 2) SelectedDot()
                     }

@@ -45,16 +45,28 @@ import kotlin.math.*
 import kotlin.random.Random
 
 // Light theme palette
-private val SheetBg     = Color(0xFFF5FBF6)
-private val SheetCard   = Color(0xFFE4F4E8)
-private val SheetChip   = Color(0xFFD2EDD8)
-private val SheetTeal   = Color(0xFF4A9E8E)
-private val SheetGreen  = Color(0xFF5BAD72)
-private val SheetText   = Color(0xFF2A4A3A)
-private val SheetSub    = Color(0xFF7A9A8A)
-private val SheetBorder = Color(0xFFB8DEC0)
-private val SheetRed    = Color(0xFFE05252)
+private val sheetBg     = Color(0xFFF5FBF6)
+private val sheetCard   = Color(0xFFE4F4E8)
+private val sheetChip   = Color(0xFFD2EDD8)
+private val sheetTeal   = Color(0xFF4A9E8E)
+private val sheetGreen  = Color(0xFF5BAD72)
+private val sheetText   = Color(0xFF2A4A3A)
+private val sheetSub    = Color(0xFF7A9A8A)
+private val sheetBorder = Color(0xFFB8DEC0)
+private val sheetRed    = Color(0xFFE05252)
 private val StarColor   = Color(0xFFFFD700)
+
+// Dark theme palette
+private val SheetBgDark     = Color(0xFF070F2B)
+private val SheetCardDark   = Color(0xFF1B1A55)
+private val SheetChipDark   = Color(0xFF535C91)
+private val SheetTealDark   = Color(0xFF96DCFA)
+private val SheetGreenDark  = Color(0xFF96DCFA)
+private val SheetTextDark   = Color(0xFFDCDCEB)
+private val SheetSubDark    = Color(0xFFA0A0C0)
+private val SheetBorderDark = Color(0xFF535C91)
+private val SheetRedDark    = Color(0xFFFF6B6B)
+
 private val DarkBg      = Color(0xFF31363F)  // unused, kept for compat
 private val SubText     = Color(0xFFAAAAAA)  // unused, kept for compat
 
@@ -89,9 +101,9 @@ private fun StarRow(rating: Double) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         repeat(full)  { Icon(Icons.Default.Star, null, tint = StarColor, modifier = Modifier.size(16.dp)) }
         repeat(half)  { Icon(Icons.Default.Star, null, tint = StarColor.copy(alpha = 0.5f), modifier = Modifier.size(16.dp)) }
-        repeat(empty) { Icon(Icons.Default.Star, null, tint = SheetSub, modifier = Modifier.size(16.dp)) }
+        repeat(empty) { Icon(Icons.Default.Star, null, tint = sheetSub, modifier = Modifier.size(16.dp)) }
         Spacer(Modifier.width(4.dp))
-        Text(rating.toOneDecimal(), color = SheetText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(rating.toOneDecimal(), color = sheetText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -152,23 +164,34 @@ fun PlaceBottomSheet(
     userId: String,
     onDismiss: () -> Unit,
     onEventCreated: (Event) -> Unit = {},
-    onEventJoined: (Event) -> Unit = {}
+    onEventJoined: (Event) -> Unit = {},
+    isDarkMode: Boolean = false
 ) {
     val apiKey = PlacesConfig.API_KEY
     val eventsHere = remember(place, allEvents) { eventsAtPlace(place, allEvents) }
     var showCreateForm by remember { mutableStateOf(false) }
 
+    val sheetBg = if (isDarkMode) SheetBgDark else sheetBg
+    val sheetCard = if (isDarkMode) SheetCardDark else sheetCard
+    val sheetChip = if (isDarkMode) SheetChipDark else sheetChip
+    val sheetTeal = if (isDarkMode) SheetTealDark else sheetTeal
+    val sheetGreen = if (isDarkMode) SheetGreenDark else sheetGreen
+    val sheetText = if (isDarkMode) SheetTextDark else sheetText
+    val sheetSub = if (isDarkMode) SheetSubDark else sheetSub
+    val sheetBorder = if (isDarkMode) SheetBorderDark else sheetBorder
+    val sheetRed = if (isDarkMode) SheetRedDark else sheetRed
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = SheetBg,
-        contentColor = SheetText,
+        containerColor = sheetBg,
+        contentColor = sheetText,
         dragHandle = {
             Box(
                 Modifier
                     .padding(top = 10.dp, bottom = 6.dp)
                     .size(width = 40.dp, height = 4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(SheetBorder)
+                    .background(sheetBorder)
             )
         }
     ) {
@@ -197,6 +220,22 @@ fun PlaceBottomSheet(
                     }
                     Spacer(Modifier.height(16.dp))
                 }
+            } else if (isDarkMode) {
+                // Default dark placeholder when no photos
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(sheetCard),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("📍", fontSize = 48.sp)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
             }
 
             item {
@@ -204,7 +243,7 @@ fun PlaceBottomSheet(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(SheetChip)
+                            .background(sheetChip)
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
@@ -214,22 +253,22 @@ fun PlaceBottomSheet(
                                 PlaceType.CLUB       -> "🎵 Club"
                                 PlaceType.RESTAURANT -> "🍴 Restaurant"
                             },
-                            color = SheetTeal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
+                            color = sheetTeal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold
                         )
                     }
                     Spacer(Modifier.height(6.dp))
-                    Text(place.name, color = SheetText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(place.name, color = sheetText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(4.dp))
                     if (place.rating != null) {
                         StarRow(place.rating)
-                        place.totalRatings?.let { Text("$it reviews", color = SheetSub, fontSize = 12.sp) }
+                        place.totalRatings?.let { Text("$it reviews", color = sheetSub, fontSize = 12.sp) }
                         Spacer(Modifier.height(4.dp))
                     }
                     if (place.address.isNotBlank()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.LocationOn, null, tint = SheetSub, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.LocationOn, null, tint = sheetSub, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text(place.address, color = SheetSub, fontSize = 13.sp)
+                            Text(place.address, color = sheetSub, fontSize = 13.sp)
                         }
                     }
                 }
@@ -238,7 +277,7 @@ fun PlaceBottomSheet(
             item {
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-                    color = SheetBorder
+                    color = sheetBorder
                 )
             }
 
@@ -248,19 +287,19 @@ fun PlaceBottomSheet(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Events here", color = SheetText, fontSize = 15.sp,
+                    Text("Events here", color = sheetText, fontSize = 15.sp,
                         fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     TextButton(onClick = { showCreateForm = true }) {
-                        Icon(Icons.Default.Add, null, tint = SheetGreen, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, null, tint = sheetGreen, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Create event", color = SheetGreen, fontSize = 13.sp)
+                        Text("Create event", color = sheetGreen, fontSize = 13.sp)
                     }
                 }
             }
 
             if (eventsHere.isEmpty()) {
                 item {
-                    Text("No events yet at this location.", color = SheetSub, fontSize = 13.sp,
+                    Text("No events yet at this location.", color = sheetSub, fontSize = 13.sp,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 }
             } else {
@@ -302,23 +341,23 @@ private fun PlaceEventCard(event: Event, userId: String, onEventJoined: (Event) 
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = SheetCard),
+        colors = CardDefaults.cardColors(containerColor = sheetCard),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text(event.title, color = SheetText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(event.title, color = sheetText, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DateRange, null, tint = SheetTeal, modifier = Modifier.size(13.dp))
+                    Icon(Icons.Default.DateRange, null, tint = sheetTeal, modifier = Modifier.size(13.dp))
                     Spacer(Modifier.width(3.dp))
-                    Text(datePart, color = SheetSub, fontSize = 12.sp)
+                    Text(datePart, color = sheetSub, fontSize = 12.sp)
                 }
                 if (timePart.isNotEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.AccessTime, null, tint = SheetTeal, modifier = Modifier.size(13.dp))
+                        Icon(Icons.Default.AccessTime, null, tint = sheetTeal, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text(timePart, color = SheetSub, fontSize = 12.sp)
+                        Text(timePart, color = sheetSub, fontSize = 12.sp)
                     }
                 }
             }
@@ -326,16 +365,16 @@ private fun PlaceEventCard(event: Event, userId: String, onEventJoined: (Event) 
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(SheetChip)
+                    .background(sheetChip)
                     .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
-                Text(spotsText, color = SheetTeal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Text(spotsText, color = sheetTeal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
             }
             if (isUpcoming) {
                 Spacer(Modifier.height(8.dp))
                 when {
-                    hasJoined -> Text("✓ Joined", color = SheetTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    isFull    -> Text("Full", color = SheetRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    hasJoined -> Text("✓ Joined", color = sheetTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    isFull    -> Text("Full", color = sheetRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     else -> Button(
                         onClick = {
                             scope.launch {
@@ -347,7 +386,7 @@ private fun PlaceEventCard(event: Event, userId: String, onEventJoined: (Event) 
                                 }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = SheetTeal),
+                        colors = ButtonDefaults.buttonColors(containerColor = sheetTeal),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
                         modifier = Modifier.height(30.dp)
                     ) {
@@ -393,10 +432,10 @@ private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () 
     Box(modifier = Modifier.fillMaxSize()) {
         AlertDialog(
             onDismissRequest = { if (!showParticles) onDismiss() },
-            containerColor = SheetBg,
-            titleContentColor = SheetText,
-            textContentColor = SheetText,
-            title = { Text("New Event at ${place.name}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = SheetText) },
+            containerColor = sheetBg,
+            titleContentColor = sheetText,
+            textContentColor = sheetText,
+            title = { Text("New Event at ${place.name}", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = sheetText) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(value = title, onValueChange = { title = it },
@@ -410,12 +449,12 @@ private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () 
                         onClick = { showDatePicker = true },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, SheetBorder),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SheetText)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, sheetBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = sheetText)
                     ) {
-                        Icon(Icons.Default.DateRange, null, tint = SheetTeal, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.DateRange, null, tint = sheetTeal, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(dateLabel, color = if (selectedDate != null) SheetText else SheetSub, fontSize = 14.sp)
+                        Text(dateLabel, color = if (selectedDate != null) sheetText else sheetSub, fontSize = 14.sp)
                         Spacer(Modifier.weight(1f))
                     }
 
@@ -423,12 +462,12 @@ private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () 
                         onClick = { showTimePicker = true },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, SheetBorder),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SheetText)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, sheetBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = sheetText)
                     ) {
-                        Icon(Icons.Default.AccessTime, null, tint = SheetTeal, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.AccessTime, null, tint = sheetTeal, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(timeLabel, color = SheetText, fontSize = 14.sp)
+                        Text(timeLabel, color = sheetText, fontSize = 14.sp)
                         Spacer(Modifier.weight(1f))
                     }
 
@@ -464,14 +503,14 @@ private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () 
                             isLoading = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = SheetGreen),
+                    colors = ButtonDefaults.buttonColors(containerColor = sheetGreen),
                     enabled = !isLoading && !showParticles
                 ) {
                     if (isLoading) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
                     else Text("Create", color = Color.White, fontWeight = FontWeight.SemiBold)
                 }
             },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = SheetSub) } }
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = sheetSub) } }
         )
 
         if (showParticles) {
@@ -482,16 +521,16 @@ private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () 
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
-            confirmButton = { TextButton(onClick = { showDatePicker = false }) { Text("OK", color = SheetGreen, fontWeight = FontWeight.SemiBold) } },
-            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel", color = SheetSub) } },
-            colors = DatePickerDefaults.colors(containerColor = SheetBg)
+            confirmButton = { TextButton(onClick = { showDatePicker = false }) { Text("OK", color = sheetGreen, fontWeight = FontWeight.SemiBold) } },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel", color = sheetSub) } },
+            colors = DatePickerDefaults.colors(containerColor = sheetBg)
         ) {
             DatePicker(state = datePickerState, colors = DatePickerDefaults.colors(
-                containerColor = SheetBg, titleContentColor = SheetTeal,
-                headlineContentColor = SheetText, weekdayContentColor = SheetSub,
-                selectedDayContainerColor = SheetGreen, selectedDayContentColor = Color.White,
-                todayContentColor = SheetGreen, todayDateBorderColor = SheetGreen,
-                dayContentColor = SheetText
+                containerColor = sheetBg, titleContentColor = sheetTeal,
+                headlineContentColor = sheetText, weekdayContentColor = sheetSub,
+                selectedDayContainerColor = sheetGreen, selectedDayContentColor = Color.White,
+                todayContentColor = sheetGreen, todayDateBorderColor = sheetGreen,
+                dayContentColor = sheetText
             ))
         }
     }
@@ -499,28 +538,28 @@ private fun CreateEventDialog(place: PlaceResult, userId: String, onDismiss: () 
     if (showTimePicker) {
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            containerColor = SheetBg,
-            title = { Text("Select time", color = SheetText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
+            containerColor = sheetBg,
+            title = { Text("Select time", color = sheetText, fontWeight = FontWeight.SemiBold, fontSize = 16.sp) },
             text = {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     TimePicker(state = timePickerState, colors = TimePickerDefaults.colors(
-                        clockDialColor = SheetCard, clockDialSelectedContentColor = Color.White,
-                        clockDialUnselectedContentColor = SheetText, selectorColor = SheetGreen,
-                        containerColor = SheetBg, timeSelectorSelectedContainerColor = SheetGreen,
-                        timeSelectorUnselectedContainerColor = SheetCard,
-                        timeSelectorSelectedContentColor = Color.White, timeSelectorUnselectedContentColor = SheetText
+                        clockDialColor = sheetCard, clockDialSelectedContentColor = Color.White,
+                        clockDialUnselectedContentColor = sheetText, selectorColor = sheetGreen,
+                        containerColor = sheetBg, timeSelectorSelectedContainerColor = sheetGreen,
+                        timeSelectorUnselectedContainerColor = sheetCard,
+                        timeSelectorSelectedContentColor = Color.White, timeSelectorUnselectedContentColor = sheetText
                     ))
                 }
             },
-            confirmButton = { TextButton(onClick = { showTimePicker = false }) { Text("OK", color = SheetGreen, fontWeight = FontWeight.SemiBold) } },
-            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancel", color = SheetSub) } }
+            confirmButton = { TextButton(onClick = { showTimePicker = false }) { Text("OK", color = sheetGreen, fontWeight = FontWeight.SemiBold) } },
+            dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancel", color = sheetSub) } }
         )
     }
 }
 
 @Composable
 private fun lightTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = SheetGreen, unfocusedBorderColor = SheetBorder,
-    focusedLabelColor = SheetGreen, unfocusedLabelColor = SheetSub,
-    focusedTextColor = SheetText, unfocusedTextColor = SheetText, cursorColor = SheetGreen
+    focusedBorderColor = sheetGreen, unfocusedBorderColor = sheetBorder,
+    focusedLabelColor = sheetGreen, unfocusedLabelColor = sheetSub,
+    focusedTextColor = sheetText, unfocusedTextColor = sheetText, cursorColor = sheetGreen
 )
