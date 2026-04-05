@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +36,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.example.project.data.model.Event
 import org.example.project.data.model.EventInsert
+import org.example.project.data.model.EventParticipant
 import org.example.project.data.model.PlaceResult
 import org.example.project.data.model.PlaceType
 import org.example.project.data.remote.PlacesConfig
@@ -51,12 +53,17 @@ private val SheetGreen  = Color(0xFF5BAD72)
 private val SheetText   = Color(0xFF2A4A3A)
 private val SheetSub    = Color(0xFF7A9A8A)
 private val SheetBorder = Color(0xFFB8DEC0)
+private val SheetRed    = Color(0xFFE05252)
 private val StarColor   = Color(0xFFFFD700)
 private val DarkBg      = Color(0xFF31363F)  // unused, kept for compat
 private val SubText     = Color(0xFFAAAAAA)  // unused, kept for compat
 
 private fun Int.pad2() = toString().padStart(2, '0')
 private fun Int.pad4() = toString().padStart(4, '0')
+private fun nowIso(): String {
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    return "${now.year.pad4()}-${now.monthNumber.pad2()}-${now.dayOfMonth.pad2()}T${now.hour.pad2()}:${now.minute.pad2()}:${now.second.pad2()}"
+}
 private fun Double.toOneDecimal(): String {
     val rounded = kotlin.math.round(this * 10).toInt()
     return "${rounded / 10}.${rounded % 10}"
@@ -255,7 +262,7 @@ fun PlaceBottomSheet(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 }
             } else {
-                items(eventsHere) { event -> PlaceEventCard(event) }
+                items(eventsHere) { event -> PlaceEventCard(event, userId) }
             }
         }
     }
@@ -266,13 +273,29 @@ fun PlaceBottomSheet(
 }
 
 @Composable
-private fun PlaceEventCard(event: Event) {
+private fun PlaceEventCard(event: Event, userId: String) {
+    val repo = remember { EventRepository() }
+    val scope = rememberCoroutineScope()
+    val now = remember { nowIso() }
+
     val parts = event.dateTime.split("T")
     val datePart = parts.getOrNull(0) ?: event.dateTime
     val timePart = parts.getOrNull(1)?.take(5) ?: ""
-    val maxSpots = event.maxParticipants
-    // Without loading participants, show total spots
-    val spotsText = "$maxSpots spots total"
+    val isUpcoming = event.dateTime >= now
+
+    var participants by remember { mutableStateOf<List<EventParticipant>>(emptyList()) }
+    var hasJoined by remember { mutableStateOf(false) }
+
+    LaunchedEffect(event.id) {
+        runCatching {
+            participants = repo.getEventParticipants(event.id)
+            hasJoined = participants.any { it.profileId == userId }
+        }
+    }
+
+    val spotsLeft = event.maxParticipants - participants.size
+    val isFull = spotsLeft <= 0
+    val spotsText = if (participants.isEmpty()) "${event.maxParticipants} spots total" else "$spotsLeft / ${event.maxParticipants} spots left"
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -305,6 +328,31 @@ private fun PlaceEventCard(event: Event) {
                     .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
                 Text(spotsText, color = SheetTeal, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            }
+            if (isUpcoming) {
+                Spacer(Modifier.height(8.dp))
+                when {
+                    hasJoined -> Text("✓ Joined", color = SheetTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    isFull    -> Text("Full", color = SheetRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    else -> Button(
+                        onClick = {
+                            scope.launch {
+                                runCatching {
+                                    repo.joinEvent(event.id, userId)
+                                    participants = repo.getEventParticipants(event.id)
+                                    hasJoined = true
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = SheetTeal),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp),
+                        modifier = Modifier.height(30.dp)
+                    ) {
+                        Icon(Icons.Default.Person, null, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Join", fontSize = 12.sp)
+                    }
+                }
             }
         }
     }
