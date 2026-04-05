@@ -130,6 +130,8 @@ actual fun MapView(
     userId: String,
     onEventClick: (Event) -> Unit,
     onPlaceClick: (PlaceResult) -> Unit,
+    searchQuery: String,
+    onSearchConsumed: () -> Unit,
     modifier: Modifier
 ) {
     val context = LocalContext.current
@@ -151,6 +153,7 @@ actual fun MapView(
     )
 
     val places by placesViewModel.places.collectAsState()
+    val searchResult by placesViewModel.searchResult.collectAsState()
     var selectedPlace by remember { mutableStateOf<PlaceResult?>(null) }
     var selectedEvent by remember { mutableStateOf<Event?>(null) }
 
@@ -163,6 +166,24 @@ actual fun MapView(
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(DEFAULT_POSITION, DEFAULT_ZOOM)
+    }
+
+    // Trigger text search when searchQuery changes
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotBlank()) {
+            placesViewModel.searchByText(searchQuery)
+            onSearchConsumed()
+        }
+    }
+
+    // Navigate to search result and show its bottom sheet
+    LaunchedEffect(searchResult) {
+        val result = searchResult ?: return@LaunchedEffect
+        cameraPositionState.animate(
+            CameraUpdateFactory.newLatLngZoom(LatLng(result.lat, result.lng), 16f)
+        )
+        selectedPlace = result
+        placesViewModel.clearSearchResult()
     }
 
     // Când evenimentele se încarcă, mută camera la primul eveniment
