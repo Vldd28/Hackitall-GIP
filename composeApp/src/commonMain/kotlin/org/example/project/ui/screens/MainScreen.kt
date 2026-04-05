@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExitToApp
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -484,6 +486,38 @@ private fun interestIcon(name: String): String {
     }
 }
 
+// Hardcoded friend data per user
+private data class FriendInfo(val name: String, val city: String, val country: String, val avatarUrl: String? = null)
+
+private val friendsByUserId: Map<String, List<FriendInfo>> = mapOf(
+    // r (513106e6) has 3 friends: sanki, vladimir, balandavidcristian
+    "513106e6-c0a4-4a63-844f-31df0e0dfc81" to listOf(
+        FriendInfo("sanki", "Bucharest", "Romania"),
+        FriendInfo("vladimir.olteanu", "Amsterdam", "Netherlands"),
+        FriendInfo("balandavidcristian", "Bucharest", "Romania")
+    ),
+    // sanki (ca5367af) has 2 friends: r, vladimir
+    "ca5367af-da58-4730-9b14-960996298b2a" to listOf(
+        FriendInfo("r", "Bucharest", "Romania"),
+        FriendInfo("vladimir.olteanu", "Amsterdam", "Netherlands")
+    ),
+    // vladimir (6caf3e20) has 2 friends: r, sanki
+    "6caf3e20-1e8f-4266-b087-928110caa96b" to listOf(
+        FriendInfo("r", "Bucharest", "Romania"),
+        FriendInfo("sanki", "Bucharest", "Romania")
+    ),
+    // balandavidcristian (43e28d58) has 1 friend: r
+    "43e28d58-abb4-4d49-834b-46a9c5710b5e" to listOf(
+        FriendInfo("r", "Bucharest", "Romania")
+    )
+)
+
+// Starting event counts per user (before any joins/creates in session)
+private val startingEventCountByUserId: Map<String, Int> = mapOf(
+    "513106e6-c0a4-4a63-844f-31df0e0dfc81" to 5,  // r
+    "ca5367af-da58-4730-9b14-960996298b2a" to 3   // sanki
+)
+
 @Composable
 private fun ProfilePage(
     profile: Profile?,
@@ -501,6 +535,8 @@ private fun ProfilePage(
     var isDarkMode by remember { mutableStateOf(false) }
     var showSignOutConfirm by remember { mutableStateOf(false) }
     var showSignOutConfirmTop by remember { mutableStateOf(false) }
+    var showFriendsDialog by remember { mutableStateOf(false) }
+    var selectedFriend by remember { mutableStateOf<FriendInfo?>(null) }
 
     val bgColor = Color(180, 222, 189)
     val profileTextColor = Color(0xFF3A5A6E)
@@ -580,25 +616,97 @@ private fun ProfilePage(
 
                         Spacer(Modifier.height(16.dp))
 
-                        // Friends left, Events right — pushed to sides
+                        // Friends and Events — centered
+                        val profileFriends = friendsByUserId[profile.id] ?: emptyList()
+                        val startingEvents = startingEventCountByUserId[profile.id] ?: 0
+                        // joinedEvents includes 4 dummy photos events; real joined = total - 4 dummies (min 0)
+                        val realJoinedCount = (joinedEvents.size - 4).coerceAtLeast(0)
+                        val totalEvents = startingEvents + realJoinedCount
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center
                         ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(start = 32.dp)
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                                    .clickable { if (profileFriends.isNotEmpty()) showFriendsDialog = true }
                             ) {
-                                Text("0", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = profileTextColor)
+                                Text("${profileFriends.size}", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = profileTextColor)
                                 Text("Friends", fontSize = 12.sp, color = profileTextColor.copy(alpha = 0.75f), fontWeight = FontWeight.SemiBold)
                             }
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(end = 32.dp)
+                                modifier = Modifier.padding(horizontal = 32.dp)
                             ) {
-                                Text("0", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = profileTextColor)
+                                Text("$totalEvents", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = profileTextColor)
                                 Text("Events", fontSize = 12.sp, color = profileTextColor.copy(alpha = 0.75f), fontWeight = FontWeight.SemiBold)
                             }
+                        }
+
+                        // Friends dialog
+                        if (showFriendsDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showFriendsDialog = false },
+                                confirmButton = {
+                                    TextButton(onClick = { showFriendsDialog = false }) {
+                                        Text("Close", color = SteelBlueDark)
+                                    }
+                                },
+                                title = { Text("Friends", fontWeight = FontWeight.Bold, color = profileTextColor) },
+                                text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        profileFriends.forEach { friend ->
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.fillMaxWidth()
+                                                    .clickable {
+                                                        showFriendsDialog = false
+                                                        selectedFriend = friend
+                                                    }
+                                            ) {
+                                                // Avatar circle
+                                                Box(
+                                                    modifier = Modifier.size(52.dp)
+                                                        .clip(CircleShape)
+                                                        .background(SteelBlueLight),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    if (!friend.avatarUrl.isNullOrBlank()) {
+                                                        AsyncImage(
+                                                            model = friend.avatarUrl,
+                                                            contentDescription = friend.name,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                                        )
+                                                    } else {
+                                                        ProfileIcon(tint = Cream, modifier = Modifier.size(28.dp))
+                                                    }
+                                                }
+                                                Spacer(Modifier.width(12.dp))
+                                                Column {
+                                                    Text(friend.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = profileTextColor)
+                                                    Text("${friend.city}, ${friend.country}", fontSize = 12.sp, color = profileTextColor.copy(alpha = 0.65f))
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                containerColor = Color(225, 245, 229),
+                                shape = RoundedCornerShape(20.dp)
+                            )
+                        }
+
+                        // Bio from database
+                        profile.bio?.takeIf { it.isNotBlank() }?.let { bio ->
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = bio,
+                                fontSize = 14.sp,
+                                fontStyle = FontStyle.Italic,
+                                color = profileTextColor.copy(alpha = 0.85f),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)
+                            )
                         }
 
                         Spacer(Modifier.height(20.dp))
@@ -816,6 +924,15 @@ private fun ProfilePage(
             Text("Could not load profile", color = SteelBlueDark, modifier = Modifier.align(Alignment.Center))
         }
 
+        // Friend profile screen overlay
+        selectedFriend?.let { friend ->
+            FriendProfileScreen(
+                friend = friend,
+                onBack = { selectedFriend = null },
+                onNavigateToEvent = onNavigateToEvent
+            )
+        }
+
         // Hobby picker overlay
         if (showHobbyPicker) {
             Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f))
@@ -847,6 +964,206 @@ private fun ProfilePage(
     }
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  FRIEND PROFILE SCREEN
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Hardcoded memories per friend name
+private val friendMemoriesByName: Map<String, List<Pair<String, Event>>> = mapOf(
+    "sanki" to listOf(
+        "asset://selfie2.jpeg" to Event(id = "9a0994bc-296c-44d2-9048-d8537ca2df1a", title = "Jazz Evening at Paradiso", description = "", locationName = "Paradiso, Amsterdam", lat = 52.3624, lng = 4.8810, dateTime = "", creatorId = ""),
+        "asset://selfie3.jpeg" to Event(id = "ea7ea491-f8e3-4c73-bbf0-884b8d1e48b4", title = "Kotlin & KMP Meetup Amsterdam", description = "", locationName = "Spaces Zuidas, Amsterdam", lat = 52.3386, lng = 4.8735, dateTime = "", creatorId = "")
+    ),
+    "vladimir.olteanu" to listOf(
+        "asset://selfie1.jpeg" to Event(id = "fe835a07-5b96-4d95-bcce-0bd0d1788455", title = "Street Art Walking Tour", description = "", locationName = "NDSM Wharf, Amsterdam", lat = 52.4008, lng = 4.8994, dateTime = "", creatorId = "")
+    ),
+    "balandavidcristian" to listOf(
+        "asset://selfie4.jpeg" to Event(id = "fd0f7e1c-233e-4671-b520-c749bd3d9b9d", title = "Vondelpark Morning Run", description = "", locationName = "Vondelpark, Amsterdam", lat = 52.3579, lng = 4.8686, dateTime = "", creatorId = "")
+    ),
+    "r" to listOf(
+        "asset://selfie1.jpeg" to Event(id = "fe835a07-5b96-4d95-bcce-0bd0d1788455", title = "Street Art Walking Tour", description = "", locationName = "NDSM Wharf, Amsterdam", lat = 52.4008, lng = 4.8994, dateTime = "", creatorId = "")
+    )
+)
+
+@Composable
+private fun FriendProfileScreen(
+    friend: FriendInfo,
+    onBack: () -> Unit,
+    onNavigateToEvent: (Event) -> Unit = {}
+) {
+    val bgColor = Color(180, 222, 189)
+    val profileTextColor = Color(0xFF3A5A6E)
+    val memories = friendMemoriesByName[friend.name] ?: emptyList()
+
+    Box(modifier = Modifier.fillMaxSize().background(bgColor)) {
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(bottom = 40.dp)
+        ) {
+            // Header section
+            Box(modifier = Modifier.fillMaxWidth().background(bgColor)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().statusBarsPadding()
+                        .padding(top = 12.dp, bottom = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Back button top-left
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.size(44.dp)
+                                .shadow(4.dp, CircleShape)
+                                .background(Cream, CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = SteelBlueDark,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Avatar
+                    Box(contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(158.dp).clip(CircleShape)
+                            .background(Brush.sweepGradient(listOf(SteelBlue, Teal, Mint, CreamDark, SteelBlue))))
+                        Box(
+                            modifier = Modifier.size(148.dp)
+                                .shadow(10.dp, CircleShape, ambientColor = SteelBlue.copy(alpha = 0.4f))
+                                .clip(CircleShape).background(SteelBlueLight.copy(alpha = 0.35f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!friend.avatarUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = friend.avatarUrl,
+                                    contentDescription = "Profile photo",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize().clip(CircleShape)
+                                )
+                            } else {
+                                ProfileIcon(tint = Cream, modifier = Modifier.size(68.dp))
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(friend.name, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = profileTextColor)
+                    Text("${friend.city}, ${friend.country}", fontSize = 13.sp, color = profileTextColor.copy(alpha = 0.75f), fontWeight = FontWeight.Medium)
+                }
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // Event Memories
+            if (memories.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .shadow(6.dp, RoundedCornerShape(20.dp))
+                        .background(
+                            Brush.horizontalGradient(listOf(SteelBlue, Teal)),
+                            RoundedCornerShape(20.dp)
+                        )
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("📸", fontSize = 20.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            "Event Memories",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+
+                memories.forEach { (photoPath, event) ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        elevation = CardDefaults.cardElevation(4.dp),
+                        colors = CardDefaults.cardColors(containerColor = Cream.copy(alpha = 0.85f))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                event.title,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = SteelBlueDark
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { onNavigateToEvent(event) }
+                            ) {
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = "Go to location",
+                                    tint = Teal,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                                Spacer(Modifier.width(3.dp))
+                                Text(
+                                    event.locationName,
+                                    fontSize = 11.sp,
+                                    color = Teal,
+                                    fontWeight = FontWeight.Medium,
+                                    textDecoration = TextDecoration.Underline
+                                )
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(110.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(Cream.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                EventPhotoImage(
+                                    storagePath = photoPath,
+                                    contentDescription = "Selfie at ${event.title}",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
+            } else {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    elevation = CardDefaults.cardElevation(2.dp),
+                    colors = CardDefaults.cardColors(containerColor = Cream.copy(alpha = 0.6f))
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No event memories yet.",
+                            fontSize = 13.sp,
+                            color = SteelBlue,
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  CALENDAR PAGE
