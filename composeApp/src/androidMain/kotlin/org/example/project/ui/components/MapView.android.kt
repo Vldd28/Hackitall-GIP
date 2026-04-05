@@ -139,6 +139,7 @@ actual fun MapView(
     centerLng: Double?,
     onCenterConsumed: () -> Unit,
     onEventCreated: (Event) -> Unit,
+    onEventJoined: (Event) -> Unit,
     modifier: Modifier
 ) {
     val placesViewModel = viewModel<PlacesViewModel>()
@@ -273,7 +274,8 @@ actual fun MapView(
         PlaceBottomSheet(
             place = place, allEvents = events, userId = userId,
             onDismiss = { selectedPlace = null },
-            onEventCreated = onEventCreated
+            onEventCreated = onEventCreated,
+            onEventJoined = onEventJoined
         )
     }
 

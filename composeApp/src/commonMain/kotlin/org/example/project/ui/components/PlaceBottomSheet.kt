@@ -151,7 +151,8 @@ fun PlaceBottomSheet(
     allEvents: List<Event>,
     userId: String,
     onDismiss: () -> Unit,
-    onEventCreated: (Event) -> Unit = {}
+    onEventCreated: (Event) -> Unit = {},
+    onEventJoined: (Event) -> Unit = {}
 ) {
     val apiKey = PlacesConfig.API_KEY
     val eventsHere = remember(place, allEvents) { eventsAtPlace(place, allEvents) }
@@ -263,7 +264,7 @@ fun PlaceBottomSheet(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 }
             } else {
-                items(eventsHere) { event -> PlaceEventCard(event, userId) }
+                items(eventsHere) { event -> PlaceEventCard(event, userId, onEventJoined) }
             }
         }
     }
@@ -274,7 +275,7 @@ fun PlaceBottomSheet(
 }
 
 @Composable
-private fun PlaceEventCard(event: Event, userId: String) {
+private fun PlaceEventCard(event: Event, userId: String, onEventJoined: (Event) -> Unit = {}) {
     val repo = remember { EventRepository() }
     val scope = rememberCoroutineScope()
     val now = remember { nowIso() }
@@ -342,6 +343,7 @@ private fun PlaceEventCard(event: Event, userId: String) {
                                     repo.joinEvent(event.id, userId)
                                     participants = repo.getEventParticipants(event.id)
                                     hasJoined = true
+                                    onEventJoined(event)
                                 }
                             }
                         },

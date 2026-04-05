@@ -126,8 +126,9 @@ class SelfieViewModel(
             }.onSuccess {
                 _showSelfiePrompt.value = false
                 _isUploading.value = false
-                // Refresh user photos
+                // Refresh user photos and events
                 loadUserPhotos(userId)
+                loadUserEvents(userId)
                 // Schedule next prompt
                 startSelfieTimer()
             }.onFailure {
@@ -156,13 +157,15 @@ class SelfieViewModel(
         }
     }
 
-    /** Load events user joined (to map photo -> event title). */
+    /** Load events user joined or created (to map photo -> event title). */
     fun loadUserEvents(userId: String) {
         viewModelScope.launch {
             runCatching {
                 val eventRepo = org.example.project.data.repository.EventRepository()
-                val events = eventRepo.getUserJoinedEvents(userId)
-                println("DEBUG: Loaded ${events.size} joined events for user $userId")
+                val joined = eventRepo.getUserJoinedEvents(userId)
+                val created = eventRepo.getUserCreatedEvents(userId)
+                val events = (joined + created).distinctBy { it.id }
+                println("DEBUG: Loaded ${events.size} events (joined+created) for user $userId")
                 events.forEach { event ->
                     println("DEBUG: Event - id=${event.id}, title=${event.title}")
                 }
@@ -172,6 +175,12 @@ class SelfieViewModel(
                 error.printStackTrace()
             }
         }
+    }
+
+    /** Immediately trigger the selfie prompt for a specific event (e.g. after joining/creating). */
+    fun triggerSelfieForEvent(event: Event) {
+        _activeEvent.value = event
+        _showSelfiePrompt.value = true
     }
 
     fun stopMonitoring() {
