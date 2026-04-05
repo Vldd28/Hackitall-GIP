@@ -2,7 +2,8 @@ package org.example.project.data.repository
 
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
-import io.github.jan.supabase.storage.storage
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 import org.example.project.data.model.EventPhoto
 import org.example.project.data.model.EventPhotoInsert
 import org.example.project.data.model.Event
@@ -51,36 +52,34 @@ class EventPhotoRepository {
     }
 
     /**
-     * Upload a selfie photo to Supabase Storage and insert a record into event_photos.
+     * Encode photo as base64 data URI and insert a record into event_photos.
+     * No storage bucket required — the image data is stored directly in the DB.
      */
+    @OptIn(ExperimentalEncodingApi::class)
     suspend fun uploadEventPhoto(
         eventId: String,
         userId: String,
         photoBytes: ByteArray,
         caption: String? = "Selfie moment!"
     ): EventPhoto {
-        val timestamp = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
-        val path = "$eventId/$userId/$timestamp.jpg"
+        // Encode photo bytes as a base64 data URI so it can be stored in the DB
+        // and loaded directly by Coil's AsyncImage without any storage bucket.
+        val base64 = Base64.encode(photoBytes)
+        val dataUri = "data:image/jpeg;base64,$base64"
 
-        // Upload to storage bucket "event-photos"
-        supabase.storage.from("event-photos").upload(path, photoBytes) {
-            upsert = false
-        }
-
-        // Get public URL
-        val publicUrl = supabase.storage.from("event-photos").publicUrl(path)
-
-        // Insert record
         val insert = EventPhotoInsert(
             eventId = eventId,
             uploadedBy = userId,
-            storagePath = publicUrl,
+            storagePath = dataUri,
             caption = caption
         )
 
-        return supabase.from("event_photos").insert(insert) {
+        println("DEBUG EventPhotoRepo: Inserting photo record for eventId=$eventId userId=$userId")
+        val result = supabase.from("event_photos").insert(insert) {
             select()
-        }.decodeSingle()
+        }.decodeSingle<EventPhoto>()
+        println("DEBUG EventPhotoRepo: ✅ Photo inserted with id=${result.id}")
+        return result
     }
 
     /**

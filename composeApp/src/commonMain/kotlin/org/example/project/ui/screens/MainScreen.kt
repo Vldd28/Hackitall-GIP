@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -43,6 +44,7 @@ import org.example.project.ui.components.MapView
 import org.example.project.data.model.PlaceResult
 import org.example.project.data.model.EventPhoto
 import org.example.project.ui.components.CameraCapture
+import org.example.project.ui.components.EventPhotoImage
 import org.example.project.ui.components.SelfiePromptOverlay
 import org.example.project.viewmodel.EventViewModel
 import org.example.project.viewmodel.ProfileViewModel
@@ -492,7 +494,8 @@ private fun ProfilePage(
     onLoadAllInterests: () -> Unit,
     onSignOut: () -> Unit,
     eventPhotos: List<EventPhoto> = emptyList(),
-    joinedEvents: List<Event> = emptyList()
+    joinedEvents: List<Event> = emptyList(),
+    onNavigateToEvent: (Event) -> Unit = {}
 ) {
     var showHobbyPicker by remember { mutableStateOf(false) }
     var isDarkMode by remember { mutableStateOf(false) }
@@ -681,13 +684,28 @@ private fun ProfilePage(
                             // Group photos by event
                             val photosByEvent = eventPhotos.groupBy { it.eventId }
 
-                            Text(
-                                "Event Memories",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = SteelBlueDark,
-                                modifier = Modifier.padding(horizontal = 24.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp)
+                                    .shadow(6.dp, RoundedCornerShape(20.dp))
+                                    .background(
+                                        Brush.horizontalGradient(listOf(SteelBlue, Teal)),
+                                        RoundedCornerShape(20.dp)
+                                    )
+                                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("📸", fontSize = 20.sp)
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(
+                                        "Event Memories",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
                             Spacer(Modifier.height(12.dp))
 
                             photosByEvent.forEach { (eventId, photos) ->
@@ -707,12 +725,25 @@ private fun ProfilePage(
                                             color = SteelBlueDark
                                         )
                                         if (event != null) {
-                                            Text(
-                                                event.locationName,
-                                                fontSize = 11.sp,
-                                                color = Teal,
-                                                fontWeight = FontWeight.Medium
-                                            )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.clickable { onNavigateToEvent(event) }
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.LocationOn,
+                                                    contentDescription = "Go to location",
+                                                    tint = Teal,
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                                Spacer(Modifier.width(3.dp))
+                                                Text(
+                                                    event.locationName,
+                                                    fontSize = 11.sp,
+                                                    color = Teal,
+                                                    fontWeight = FontWeight.Medium,
+                                                    textDecoration = TextDecoration.Underline
+                                                )
+                                            }
                                         }
                                         Spacer(Modifier.height(10.dp))
 
@@ -728,8 +759,8 @@ private fun ProfilePage(
                                                         .background(Cream.copy(alpha = 0.3f)),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    AsyncImage(
-                                                        model = photo.storagePath,
+                                                    EventPhotoImage(
+                                                        storagePath = photo.storagePath,
                                                         contentDescription = photo.caption ?: "Event selfie",
                                                         contentScale = ContentScale.Crop,
                                                         modifier = Modifier.fillMaxSize()
@@ -1145,15 +1176,62 @@ fun MainScreen(
                 onEventCreated = { event -> eventViewModel.addEvent(event); selfieViewModel.triggerSelfieForEvent(event) },
                 onEventJoined = { event -> selfieViewModel.triggerSelfieForEvent(event) }
             )
-            selectedTab == 2 -> ProfilePage(
-                profile = profile, isLoading = isLoading, userInterests = userInterests,
-                allInterests = allInterests,
-                onAddHobbies = { ids -> profileViewModel.setUserInterests(userId, ids) },
-                onLoadAllInterests = { profileViewModel.loadAllInterests() },
-                onSignOut = onSignOut,
-                eventPhotos = userPhotos,
-                joinedEvents = userJoinedEvents
-            )
+            selectedTab == 2 -> {
+                val dummyPhotos = remember {
+                    listOf(
+                        EventPhoto(
+                            id = "dummy-1",
+                            eventId = "fe835a07-5b96-4d95-bcce-0bd0d1788455",
+                            uploadedBy = userId,
+                            storagePath = "asset://selfie1.jpeg",
+                            caption = "Selfie at Street Art Walking Tour"
+                        ),
+                        EventPhoto(
+                            id = "dummy-2",
+                            eventId = "9a0994bc-296c-44d2-9048-d8537ca2df1a",
+                            uploadedBy = userId,
+                            storagePath = "asset://selfie2.jpeg",
+                            caption = "Selfie at Jazz Evening at Paradiso"
+                        ),
+                        EventPhoto(
+                            id = "dummy-3",
+                            eventId = "ea7ea491-f8e3-4c73-bbf0-884b8d1e48b4",
+                            uploadedBy = userId,
+                            storagePath = "asset://selfie3.jpeg",
+                            caption = "Selfie at Kotlin & KMP Meetup Amsterdam"
+                        ),
+                        EventPhoto(
+                            id = "dummy-4",
+                            eventId = "fd0f7e1c-233e-4671-b520-c749bd3d9b9d",
+                            uploadedBy = userId,
+                            storagePath = "asset://selfie4.jpeg",
+                            caption = "Selfie at Vondelpark Morning Run"
+                        )
+                    )
+                }
+                val dummyEvents = remember {
+                    listOf(
+                        Event(id = "fe835a07-5b96-4d95-bcce-0bd0d1788455", title = "Street Art Walking Tour", description = "", locationName = "NDSM Wharf, Amsterdam", lat = 52.4008, lng = 4.8994, dateTime = "", creatorId = ""),
+                        Event(id = "9a0994bc-296c-44d2-9048-d8537ca2df1a", title = "Jazz Evening at Paradiso", description = "", locationName = "Paradiso, Amsterdam", lat = 52.3624, lng = 4.8810, dateTime = "", creatorId = ""),
+                        Event(id = "ea7ea491-f8e3-4c73-bbf0-884b8d1e48b4", title = "Kotlin & KMP Meetup Amsterdam", description = "", locationName = "Spaces Zuidas, Amsterdam", lat = 52.3386, lng = 4.8735, dateTime = "", creatorId = ""),
+                        Event(id = "fd0f7e1c-233e-4671-b520-c749bd3d9b9d", title = "Vondelpark Morning Run", description = "", locationName = "Vondelpark, Amsterdam", lat = 52.3579, lng = 4.8686, dateTime = "", creatorId = "")
+                    )
+                }
+                ProfilePage(
+                    profile = profile, isLoading = isLoading, userInterests = userInterests,
+                    allInterests = allInterests,
+                    onAddHobbies = { ids -> profileViewModel.setUserInterests(userId, ids) },
+                    onLoadAllInterests = { profileViewModel.loadAllInterests() },
+                    onSignOut = onSignOut,
+                    eventPhotos = dummyPhotos + userPhotos,
+                    joinedEvents = dummyEvents + userJoinedEvents,
+                    onNavigateToEvent = { event ->
+                        selectedTab = 1
+                        mapCenterLat = event.lat
+                        mapCenterLng = event.lng
+                    }
+                )
+            }
         }
 
         // Minimized calendar overlay
